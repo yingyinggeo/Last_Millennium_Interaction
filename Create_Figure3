@@ -1,0 +1,913 @@
+%% 论文版 只有2年的Nino3.4 regression pattern on u
+load('sst_idx_850-2005_ILME_FULL_15ens.mat')
+for inum = 1:15
+    tmp = sst_idx(time_1850_2005,:,:);
+    nino_monthly = movmean((tmp(1333:end,1,inum)-273.15),5); %1961年开始对应1333
+    nino_monthly_re = reshape(nino_monthly,12,size(nino_monthly,1)./12);
+    nino_season_avg = nanmean(nino_monthly_re,2);
+    nino_season_avg_rep = repmat(nino_season_avg,1,45);
+    nino_monthly_ano = nino_monthly_re - nino_season_avg_rep;
+
+    nino_idx = detrend(nanmean([nino_monthly_ano(12,1:end-1);nino_monthly_ano(1:2,2:end)],1))';
+    nino_ens(:,inum) = nino_idx;
+end
+        
+yr = 1961:2005;
+
+load iLME_full_u_mme_850.mat;
+modelsst_period = 1333:1872; %1961年开始对应1333
+u_ens = u_per_fl(:,:,time_1850_2005,:); clear u_per_fl;
+f_var_MME = u_ens(:,:,modelsst_period,:); clear u_ens;
+
+sst_ilme = reshape(f_var_MME,96,144,12,540/12,size(f_var_MME,4)); clear f_var_MME;
+sst_ilme_avg = nanmean(sst_ilme,4);
+sst_ilme_avg_rep = repmat(sst_ilme_avg,1, 1, 1, 45, 1);
+sst_ilme_ano = sst_ilme - sst_ilme_avg_rep; clear sst_ilme; clear sst_ilme_avg_rep;  
+
+for iens = 1:15
+    Nino_idx_yr = nino_ens(:,iens); %未detrend 未滑动平均
+    sst_raw = squeeze(sst_ilme_ano(:,:,:,:,iens));
+
+    for isn = 1:4
+
+        if isn == 1
+            sst_tmp = squeeze(nanmean(sst_raw(:,:,6:8,1:end-1),3)); %与Nino同年
+        end
+
+        if isn == 2
+            sst_tmp = squeeze(nanmean(sst_raw(:,:,9:11,1:end-1),3)); %与Nino同年
+        end
+
+        if isn == 3
+            tmp1 = [sst_raw(:,:,12,1:end-1)];
+            tmp2 = [sst_raw(:,:,1:2,2:end)];
+            pattern_tmp = tmp1;
+            pattern_tmp(:,:,2:3,:) = tmp2;
+            sst_tmp = squeeze(nanmean(pattern_tmp,3));
+            clear pattern_tmp; clear tmp1; clear tmp2;
+        end
+
+        if isn == 4
+            sst_tmp = squeeze(nanmean(sst_raw(:,:,3:5,2:end),3)); %Nino后一年
+        end
+
+   
+        for ilat = 1:size(sst_tmp,1)
+            for ilon = 1:size(sst_tmp,2)
+
+                tmp_series = squeeze(sst_tmp(ilat,ilon,:));
+                index = find(isnan(tmp_series));
+                if size(index,1) > 0
+                    tmp_series(index) = [];
+                end
+
+                if length(tmp_series) > 3
+                    % tmp_series_cli_avg = nanmean(tmp_series(climate_ave_period));
+                    % series_ano = tmp_series - tmp_series_cli_avg;
+                    % Y = detrend(series_ano);
+                    Y = detrend(tmp_series);
+                    X = detrend(Nino_idx_yr(1:end));
+                    clear data_series_re; clear mon_climate_mean; clear mon_climate_mean_rep; clear data_ano; clear data_ano_series;
+               
+                    x1=[ones(size(X,1),1), X];
+                    [c,~,~,~,stats]  = regress(Y,x1);
+                    % sst_nino_relate_detrend = c(1,1)+c(2,1).*X;
+                    % sst_no_nino_relate_detrend = Y-sst_nino_relate_detrend;
+                    %
+                    % [c1,~,~,~,stats1]  = regress(sst_no_nino_relate_detrend,x1);
+                    r_Nino(ilat, ilon) = c(2,1);
+                    p_Nino(ilat, ilon) = stats(1,3);
+                end
+            end
+        end
+
+        pattern_u(:,:,isn,iens) = r_Nino; pattern_u_pv(:,:,isn,iens) = p_Nino;
+        clear r_Nino; clear p_Nino;
+    end
+end
+
+save regress_nino3.4_u_detrend_1961_2005.mat  pattern_u pattern_u_pv lat_af lon_af;
+
+%% 论文版 只有2年的Nino3.4 regression pattern on v
+load('sst_idx_850-2005_ILME_FULL_15ens.mat')
+for inum = 1:15
+    tmp = sst_idx(time_1850_2005,:,:);
+    nino_monthly = movmean((tmp(1333:end,1,inum)-273.15),5); %1961年开始对应1333
+    nino_monthly_re = reshape(nino_monthly,12,size(nino_monthly,1)./12);
+    nino_season_avg = nanmean(nino_monthly_re,2);
+    nino_season_avg_rep = repmat(nino_season_avg,1,45);
+    nino_monthly_ano = nino_monthly_re - nino_season_avg_rep;
+
+    nino_idx = detrend(nanmean([nino_monthly_ano(12,1:end-1);nino_monthly_ano(1:2,2:end)],1))';
+    nino_ens(:,inum) = nino_idx;
+end
+        
+yr = 1961:2005;
+
+load iLME_full_v_mme_850.mat;
+modelsst_period = 1333:1872; %1961年开始对应1333
+v_ens = v_per_fl(:,:,time_1850_2005,:); clear v_per_fl;
+f_var_MME = v_ens(:,:,modelsst_period,:); clear v_ens;
+
+sst_ilme = reshape(f_var_MME,96,144,12,540/12,size(f_var_MME,4)); clear f_var_MME;
+sst_ilme_avg = nanmean(sst_ilme,4);
+sst_ilme_avg_rep = repmat(sst_ilme_avg,1, 1, 1, 45, 1);
+sst_ilme_ano = sst_ilme - sst_ilme_avg_rep; clear sst_ilme; clear sst_ilme_avg_rep;  
+
+for iens = 1:15
+    Nino_idx_yr = nino_ens(:,iens); %未detrend 未滑动平均
+    sst_raw = squeeze(sst_ilme_ano(:,:,:,:,iens));
+
+    for isn = 1:4
+
+        if isn == 1
+            sst_tmp = squeeze(nanmean(sst_raw(:,:,6:8,1:end-1),3)); %与Nino同年
+        end
+
+        if isn == 2
+            sst_tmp = squeeze(nanmean(sst_raw(:,:,9:11,1:end-1),3)); %与Nino同年
+        end
+
+        if isn == 3
+            tmp1 = [sst_raw(:,:,12,1:end-1)];
+            tmp2 = [sst_raw(:,:,1:2,2:end)];
+            pattern_tmp = tmp1;
+            pattern_tmp(:,:,2:3,:) = tmp2;
+            sst_tmp = squeeze(nanmean(pattern_tmp,3));
+            clear pattern_tmp; clear tmp1; clear tmp2;
+        end
+
+        if isn == 4
+            sst_tmp = squeeze(nanmean(sst_raw(:,:,3:5,2:end),3)); %Nino后一年
+        end
+
+   
+        for ilat = 1:size(sst_tmp,1)
+            for ilon = 1:size(sst_tmp,2)
+
+                tmp_series = squeeze(sst_tmp(ilat,ilon,:));
+                index = find(isnan(tmp_series));
+                if size(index,1) > 0
+                    tmp_series(index) = [];
+                end
+
+                if length(tmp_series) > 3
+                    % tmp_series_cli_avg = nanmean(tmp_series(climate_ave_period));
+                    % series_ano = tmp_series - tmp_series_cli_avg;
+                    % Y = detrend(series_ano);
+                    Y = detrend(tmp_series);
+                    X = detrend(Nino_idx_yr(1:end));
+                    clear data_series_re; clear mon_climate_mean; clear mon_climate_mean_rep; clear data_ano; clear data_ano_series;
+               
+                    x1=[ones(size(X,1),1), X];
+                    [c,~,~,~,stats]  = regress(Y,x1);
+                    % sst_nino_relate_detrend = c(1,1)+c(2,1).*X;
+                    % sst_no_nino_relate_detrend = Y-sst_nino_relate_detrend;
+                    %
+                    % [c1,~,~,~,stats1]  = regress(sst_no_nino_relate_detrend,x1);
+                    r_Nino(ilat, ilon) = c(2,1);
+                    p_Nino(ilat, ilon) = stats(1,3);
+                end
+            end
+        end
+
+        pattern_v(:,:,isn,iens) = r_Nino; pattern_v_pv(:,:,isn,iens) = p_Nino;
+        clear r_Nino; clear p_Nino;
+    end
+end
+
+save regress_nino3.4_v_detrend_1961_2005.mat  pattern_v pattern_v_pv lat_af lon_af;
+
+%% figure 论文版
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/Final_figure/regress_nino3.4_sst_detrend_1961_2005.mat')
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/Final_figure/regress_nino3.4_u_detrend_1961_2005.mat')
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/Final_figure/regress_nino3.4_v_detrend_1961_2005.mat')
+
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+mask_sst_tmp = squeeze(hadisst_per(:,:,end)); clear hadisst_per;
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+mask_sst_rep = repmat(mask_sst,1,1,size(pattern,3),size(pattern,4));
+pattern(isnan(mask_sst_rep)) = nan;
+pattern_pv(isnan(mask_sst_rep)) = nan;
+
+pattern_final = pattern; pattern_final(:,1:72,:,:) = pattern(:,73:144,:,:); pattern_final(:,73:144,:,:) = pattern(:,1:72,:,:);
+pattern_pv_final = pattern_pv; pattern_pv_final(:,1:72,:) = pattern_pv(:,73:144,:); pattern_pv_final(:,73:144,:) = pattern_pv(:,1:72,:);
+
+pattern_plot_final = squeeze(nanmean(pattern_final(:,:,:,:),4));
+pattern_plot_pv_final = squeeze(nanmean(pattern_pv_final(:,:,:,:),4));
+
+pattern_u_final = pattern_u; pattern_u_final(:,1:72,:,:) = pattern_u(:,73:144,:,:); pattern_u_final(:,73:144,:,:) = pattern_u(:,1:72,:,:);
+pattern_u_pv_final = pattern_u_pv; pattern_u_pv_final(:,1:72,:) = pattern_u_pv(:,73:144,:); pattern_u_pv_final(:,73:144,:) = pattern_u_pv(:,1:72,:);
+
+pattern_v_final = pattern_v; pattern_v_final(:,1:72,:,:) = pattern_v(:,73:144,:,:); pattern_v_final(:,73:144,:,:) = pattern_v(:,1:72,:,:);
+pattern_v_pv_final = pattern_v_pv; pattern_v_pv_final(:,1:72,:) = pattern_v_pv(:,73:144,:); pattern_v_pv_final(:,73:144,:) = pattern_v_pv(:,1:72,:);
+
+
+reso_lat = 1.875; reso_lon = 2.5;
+lat_af = 90-reso_lat/2 : -reso_lat : -90+reso_lat/2;
+lon_af = 0+reso_lon/2:reso_lon:360-reso_lon/2;
+
+page_width = 18;
+page_height = 18;
+figure('Units','centimeters',...
+       'position',[0 0 page_width page_height],...
+       'PaperPosition',[0 0 page_width page_height],...
+       'color',[1 1 1]);
+   
+% set position of three subplots
+nrow=4;
+ncol=1;
+width = 0.35;
+height = width./4.5;
+epsw = 0.1;
+epsh = 0.1;
+xstart=0.1;
+ystart=0.1;
+pos = zeros(nrow*ncol,4);
+for r=1:nrow
+    for c=1:ncol
+        pos((r-1)*ncol+c,1)=xstart + (c-1)*(width+epsw);
+        pos((r-1)*ncol+c,2)=1-(ystart+r*height+(r-1)*epsh);
+        pos((r-1)*ncol+c,3)=width;
+        pos((r-1)*ncol+c,4)=height;
+    end
+end
+
+% labels
+Label = {'JJA (0)', 'SON (0)', 'DJF (0/1)','MAM(1)'};
+Label_abc = {'a', 'b', 'c','d','e','f','g','h','i','j','k','l','m','n'};
+
+load coastlines;
+
+iiid = find(coastlon<0);
+coastlon_new = coastlon;
+coastlon_new(iiid) = coastlon(iiid)+360;
+
+coastlon_new(coastlon_new>359.5) = nan;
+coastlon_new(coastlon_new<-359.5) = nan;
+coastlat(coastlat>89.5) = nan;
+coastlat(coastlat<-89.5) = nan;
+coastlat(coastlat>-0.025&coastlat<0.025) = nan;
+
+u_pattern_re = imresample([2.5 1.875],nanmean(pattern_u_final,4),[10,10],'linear');
+v_pattern_re = imresample([2.5 1.875],nanmean(pattern_v_final,4),[10,10],'linear');
+
+[x,y] = meshgrid(0+5:10:360-5,90-5:-10:-90+5); 
+
+for inum = 1:nrow * ncol
+
+    ax= axes('Position',pos(inum,:),'Color','none');
+    set(ax, 'ylim' , [-30, 30],'YTick',-30:30:30,'TickDir','out', 'TickLength',[0.005/0.3, 0],...
+        'YTickLabel',{'30\circS','EQ' ,'30\circN'},'FontName','Helvetica','FontSize',12);
+
+    set(ax, 'xlim' , [0.25 359.75], 'XTick',[0:90:360],'XTickLabel',[]);
+    text(0:90:360, [-45 -45 -45 -45 -45],{'0\circ','90\circE','180\circ','90\circW', '0\circ'},...
+         'FontName','Helvetica','horizontalalignment','center','FontSize',12)
+
+    hold on %!!!!!!!!
+   % imagesc( lon_af, lat_af, pattern_final(:, :, inum),'alphadata',~isnan( pattern_final(:, :, inum) ) );
+%
+    % 等值线
+    [c,h] = contourf(lon_af, lat_af, pattern_plot_final(:, :, inum), 'LevelList', [-100, -4 : 0.1 : 4, 100]);
+    h.LineColor = 'none';
+    load BlueDarkRed18.mat;
+    colormap (BlueDarkRed18);
+
+    caxis([-0.9 0.9]);
+    hold on;
+
+        is_sig = pattern_plot_pv_final  (:, :, inum);
+        seq = 3;
+
+        for iilat = 1: seq : size(is_sig,1)
+            for iilon = 1: seq : size(is_sig,2)
+
+                if is_sig(iilat,iilon) < 0.1
+                                    % line([lon_af(iilon)-0.5*seq*reso, lon_af(iilon)+0.5*seq*reso], [lat_af(iilat)-0.5*seq*reso, lat_af(iilat)+0.5*seq*reso], ...
+                                    %     'linestyle','-', 'linewidth', 0.5,'color','k');
+                                    % 
+                    plot(lon_af(iilon), lat_af(iilat),  '.','color','g','markersize', 4);                    
+                end                
+            end
+        end
+        
+    plot(coastlon_new, coastlat,'k');
+
+    ncquiverref(x,y, u_pattern_re(:,:,inum), v_pattern_re(:,:,inum),'',1, 'veccol', 'k');
+
+
+    % 经纬度范围
+    lat_min1 = -5; lat_max1 = 5;      % 5°N–5°S for first box
+    lon_min1 = 190; lon_max1 = 240;   % 170°W–120°W (converted to 0-360°E)
+
+    lat_min2 = 5; lat_max2 = 25;      % 5°N–25°N for second box
+    lon_min2 = 305; lon_max2 = 345;   % 55°W–15°W (converted to 0-360°E)
+
+    lat_min3 = -20; lat_max3 = 20;    % 20°S–20°N for third box
+    lon_min3 = 40; lon_max3 = 100;    % 40°E–100°E (already in 0-360°E)
+
+    % 画第一个矩形框 (170°W–120°W, 5°N–5°S)
+    lon_box1 = [lon_min1 lon_max1 lon_max1 lon_min1 lon_min1];
+    lat_box1 = [lat_min1 lat_min1 lat_max1 lat_max1 lat_min1];
+    plot(lon_box1, lat_box1,'Color', [0,0,0], 'LineStyle', '-','LineWidth', 1.25); % 红色矩形框
+
+    % 画第二个矩形框 (55°W–15°W, 5°N–25°N)
+    lon_box2 = [lon_min2 lon_max2 lon_max2 lon_min2 lon_min2];
+    lat_box2 = [lat_min2 lat_min2 lat_max2 lat_max2 lat_min2];
+    plot(lon_box2, lat_box2, 'Color', 'b', 'LineStyle', '-','LineWidth', 1.25); % 蓝色矩形框
+
+    % 画第三个矩形框 (40°E–100°E, 20°S–20°N)
+    lon_box3 = [lon_min3 lon_max3 lon_max3 lon_min3 lon_min3];
+    lat_box3 = [lat_min3 lat_min3 lat_max3 lat_max3 lat_min3];
+    plot(lon_box3, lat_box3, 'Color', [100, 30, 181]./255, 'LineStyle', '-', 'LineWidth', 1.25); % 绿色矩形框
+
+    box off;
+    grid off;
+    set(ax,'layer','top');
+
+    text(359.75, 43, Label{inum},  'FontName','Helvetica','horizontalalignment','right','FontSize',12);
+    text(0, 43, Label_abc{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
+
+    box off
+    ax=gca;
+    axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none')
+end
+
+% colorbar
+cb1=colorbar(ax,'location','southoutside','position',[0.25 0.18 0.5 0.015]);
+set(cb1,'ticks', [-0.8 -0.4 0 0.4 0.8], 'XTickLabel',{'<-0.8','0.4','0','0.4','>0.8'},'ticklength', 0.005/0.3 ,'fontsize',12);
+
+cb1ax = axes('position', cb1.Position, 'visible', 'off');
+text(cb1ax, 0.5, -4, 'Regression of SSTA on Nino3.4','Fontname','Helvetica','fontsize',12,'horizontalalignment','center' );
+% 
+img =gcf;
+print(img, '-dtiff', '-r600', './C01_Regress_on_nino3.4_LME_new_add_rectangle.tif');
+
+%% u ERA5
+clear; clc;
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+lat_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','latitude');
+lon_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','longitude');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+
+mask_sst_tmp = squeeze(hadisst_per(:,:,end));
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+hadisst_per_re = imresample([1 1], hadisst_per,[reso_lon,reso_lat],'linear');
+
+lat_05deg = 90-reso_lat/2 : -reso_lat : -90+reso_lat/2;
+lon_05deg = -180+reso_lon/2:reso_lon:180-reso_lon/2;
+[glon_05deg,glat_05deg] = meshgrid(lon_05deg,lat_05deg);
+[nlat_05deg,nlon_05deg] = size(glon_05deg);
+
+display ('Generating Area Mask ...');
+map = ones(nlat_05deg,nlon_05deg);
+R = georasterref('RasterSize', [nlat_05deg nlon_05deg], ...
+    'RasterInterpretation', 'cells', 'ColumnsStartFrom', 'north', ...
+    'LatitudeLimits', [lat_05deg(end) lat_05deg(1)], 'LongitudeLimits', [lon_05deg(1) lon_05deg(end)]);
+ellipsid = referenceEllipsoid('Earth','km');
+[~,areavec] = areamat(map,R,ellipsid);
+[~,map_area0] = meshgrid(lon_05deg,areavec);
+mask_area = map_area0;
+mask_area(isnan(mask_sst)) = nan;
+%%%%%%%%%%%%%%%%开始SST选区%%%%%%%%%%%%%%%%%%%%
+nino_mask = mask_area;       % 5N-5S, 170W-120W
+nino_mask_final = mask_area;
+nino_mask(46:51,5:24) = 999; nino_mask(nino_mask~=999) = nan;
+nino_mask_final(isnan(nino_mask)) = nan;
+
+ts_re_fullperiod = hadisst_per_re(:,:,1093:1632); % 1961-1-1  1093   %2005-12-15  1632
+% ts_re_fullperiod = hadisst_per_re(:,:,361:1632+180); % 1900-1-1  1900   %2005-12-15  1632
+
+mask = nino_mask_final;
+data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%最
+mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+ss = size(data_no_areaweight);
+temp = nan(ss(1),ss(2),ss(3));
+for i = 1:ss(3)
+    temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+end
+data = temp;
+s = size(data);
+for i = 1:s(3)
+    t = squeeze(data(:,:,i));
+    data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+end
+sst_idx_obs(:,1) = movmean(data_series,5); clear data_series;
+
+Nino_re = reshape(squeeze(sst_idx_obs(:,1,:)),12,540/12);
+tmp_nino = Nino_re;
+Nino_idx = squeeze(nanmean([tmp_nino(12,1:end-1);tmp_nino(1:2,2:end)],1))';
+clear tmp_nino;
+save /Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/Hadisst_1961-2005_nino3.4.mat Nino_idx;
+
+load Hadisst_1961-2005_nino3.4.mat Nino_idx;
+ncdisp('u_850_1940_2024.nc');
+uwnd = ncread('u_850_1940_2024.nc','u');
+uwnd_per = permute(uwnd,[2,1,3,4]);
+lat = ncread('u_850_1940_2024.nc','latitude');
+lon = ncread('u_850_1940_2024.nc','longitude');
+
+if(lon(1)>=0)
+    idx = find(lon<=180);
+    n1 = length(idx); n2 = length(lon)-length(idx);
+    tmp1 = lon(1:n1); tmp2 = lon(n1+1:end)-360;
+    lon(n2+1:end) = tmp1;
+    lon(1:n2) = tmp2;
+    tmp1 = uwnd_per(:,1:n1,:,:); tmp2 = uwnd_per(:,n1+1:end,:,:);
+    uwnd_per(:,1:n2,:,:) = tmp2;
+    uwnd_per(:,n2+1:end,:,:) = tmp1;
+end
+
+u_850 = double(squeeze(uwnd_per(:,:,1,1:end-3))); %1940-2005:22:66
+
+sst_ilme = reshape(u_850, 721,1440,12,size(u_850,3)/12); 
+sst_ilme_avg = nanmean(sst_ilme,4); 
+sst_ilme_avg_rep = repmat(sst_ilme_avg,1, 1, 1, size(u_850,3)/12);
+sst_ilme_ano = sst_ilme - sst_ilme_avg_rep;
+clear sst_ilme; clear sst_ilme_avg; clear sst_ilme_avg_rep; clear ts_ens; clear ts_per_fl; clear u_850;
+
+sst_raw = squeeze(sst_ilme_ano(:,:,:,22:66));
+
+for isn = 1:4
+
+    if isn == 1
+        sst_tmp = squeeze(nanmean(sst_raw(:,:,6:8,1:end-1),3)); %与Nino同年
+    end
+
+    if isn == 2
+        sst_tmp = squeeze(nanmean(sst_raw(:,:,9:11,1:end-1),3)); %与Nino同年
+    end
+
+    if isn == 3
+        tmp1 = [sst_raw(:,:,12,1:end-1)];
+        tmp2 = [sst_raw(:,:,1:2,2:end)];
+        pattern_tmp = tmp1;
+        pattern_tmp(:,:,2:3,:) = tmp2;
+        sst_tmp = squeeze(nanmean(pattern_tmp,3));
+        clear pattern_tmp; clear tmp1; clear tmp2;
+    end
+
+    if isn == 4
+        sst_tmp = squeeze(nanmean(sst_raw(:,:,3:5,2:end),3)); %Nino后一年
+    end
+
+
+    for ilat = 1:size(sst_tmp,1)
+        for ilon = 1:size(sst_tmp,2)
+
+            tmp_series = squeeze(sst_tmp(ilat,ilon,:));
+            index = find(isnan(tmp_series));
+            if size(index,1) > 0
+                tmp_series(index) = [];
+            end
+
+            if length(tmp_series) == 44
+                Y = detrend(tmp_series);
+                X = detrend(Nino_idx(1:end));
+                clear data_series_re; clear mon_climate_mean; clear mon_climate_mean_rep; clear data_ano; clear data_ano_series;
+
+                x1=[ones(size(X,1),1), X];
+                [c,~,~,~,stats]  = regress(Y,x1);
+                r_Nino(ilat, ilon) = c(2,1);
+                p_Nino(ilat, ilon) = stats(1,3);
+            end
+        end
+    end
+
+    pattern_u(:,:,isn) = r_Nino; pattern_u_pv(:,:,isn) = p_Nino;
+end
+
+save Real_regress_pattern_u_on_nino3.4_ERSST_1979.mat pattern_u pattern_u_pv;
+
+%% V  ERA5 
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+lat_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','latitude');
+lon_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','longitude');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+
+mask_sst_tmp = squeeze(hadisst_per(:,:,end));
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+hadisst_per_re = imresample([1 1], hadisst_per,[reso_lon,reso_lat],'linear');
+
+lat_05deg = 90-reso_lat/2 : -reso_lat : -90+reso_lat/2;
+lon_05deg = -180+reso_lon/2:reso_lon:180-reso_lon/2;
+[glon_05deg,glat_05deg] = meshgrid(lon_05deg,lat_05deg);
+[nlat_05deg,nlon_05deg] = size(glon_05deg);
+
+display ('Generating Area Mask ...');
+map = ones(nlat_05deg,nlon_05deg);
+R = georasterref('RasterSize', [nlat_05deg nlon_05deg], ...
+    'RasterInterpretation', 'cells', 'ColumnsStartFrom', 'north', ...
+    'LatitudeLimits', [lat_05deg(end) lat_05deg(1)], 'LongitudeLimits', [lon_05deg(1) lon_05deg(end)]);
+ellipsid = referenceEllipsoid('Earth','km');
+[~,areavec] = areamat(map,R,ellipsid);
+[~,map_area0] = meshgrid(lon_05deg,areavec);
+mask_area = map_area0;
+mask_area(isnan(mask_sst)) = nan;
+%%%%%%%%%%%%%%%%开始SST选区%%%%%%%%%%%%%%%%%%%%
+nino_mask = mask_area;       % 5N-5S, 170W-120W
+nino_mask_final = mask_area;
+nino_mask(46:51,5:24) = 999; nino_mask(nino_mask~=999) = nan;
+nino_mask_final(isnan(nino_mask)) = nan;
+
+
+ts_re_fullperiod = hadisst_per_re(:,:,1093:1632); % 1961-1-1  1093   %2005-12-15  1632
+% ts_re_fullperiod = hadisst_per_re(:,:,361:1632+180); % 1900-1-1  1900   %2005-12-15  1632
+
+mask = nino_mask_final;
+data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%最
+mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+ss = size(data_no_areaweight);
+temp = nan(ss(1),ss(2),ss(3));
+for i = 1:ss(3)
+    temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+end
+data = temp;
+s = size(data);
+for i = 1:s(3)
+    t = squeeze(data(:,:,i));
+    data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+end
+sst_idx_obs(:,1) = movmean(data_series,5); clear data_series;
+
+Nino_re = reshape(squeeze(sst_idx_obs(:,1,:)),12,540/12);
+tmp_nino = Nino_re;
+Nino_idx = squeeze(nanmean([tmp_nino(12,1:end-1);tmp_nino(1:2,2:end)],1))';
+clear tmp_nino;
+
+load Hadisst_1961-2005_nino3.4.mat Nino_idx;
+ncdisp('v_850_1940_2024.nc');
+vwnd = ncread('v_850_1940_2024.nc','v');
+vwnd_per = permute(vwnd,[2,1,3,4]);
+lat = ncread('v_850_1940_2024.nc','latitude');
+lon = ncread('v_850_1940_2024.nc','longitude');
+
+if(lon(1)>=0)
+    idx = find(lon<=180);
+    n1 = length(idx); n2 = length(lon)-length(idx);
+    tmp1 = lon(1:n1); tmp2 = lon(n1+1:end)-360;
+    lon(n2+1:end) = tmp1;
+    lon(1:n2) = tmp2;
+    tmp1 = vwnd_per(:,1:n1,:,:); tmp2 = vwnd_per(:,n1+1:end,:,:);
+    vwnd_per(:,1:n2,:,:) = tmp2;
+    vwnd_per(:,n2+1:end,:,:) = tmp1;
+end
+
+v_850 = double(squeeze(vwnd_per(:,:,1,1:end-3))); 
+
+sst_ilme = reshape(v_850, 721,1440,12,size(v_850,3)/12); 
+sst_ilme_avg = nanmean(sst_ilme,4); 
+sst_ilme_avg_rep = repmat(sst_ilme_avg,1, 1, 1, size(v_850,3)/12);
+sst_ilme_ano = sst_ilme - sst_ilme_avg_rep;
+clear sst_ilme; clear sst_ilme_avg; clear sst_ilme_avg_rep; clear ts_ens; clear ts_per_fl; clear u_850;
+
+sst_raw = squeeze(sst_ilme_ano(:,:,:,22:66)); %1940-2005:22:66
+
+for isn = 1:4
+
+    if isn == 1
+        sst_tmp = squeeze(nanmean(sst_raw(:,:,6:8,1:end-1),3)); %与Nino同年
+    end
+
+    if isn == 2
+        sst_tmp = squeeze(nanmean(sst_raw(:,:,9:11,1:end-1),3)); %与Nino同年
+    end
+
+    if isn == 3
+        tmp1 = [sst_raw(:,:,12,1:end-1)];
+        tmp2 = [sst_raw(:,:,1:2,2:end)];
+        pattern_tmp = tmp1;
+        pattern_tmp(:,:,2:3,:) = tmp2;
+        sst_tmp = squeeze(nanmean(pattern_tmp,3));
+        clear pattern_tmp; clear tmp1; clear tmp2;
+    end
+
+    if isn == 4
+        sst_tmp = squeeze(nanmean(sst_raw(:,:,3:5,2:end),3)); %Nino后一年
+    end
+
+
+    for ilat = 1:size(sst_tmp,1)
+        for ilon = 1:size(sst_tmp,2)
+
+            tmp_series = squeeze(sst_tmp(ilat,ilon,:));
+            index = find(isnan(tmp_series));
+            if size(index,1) > 0
+                tmp_series(index) = [];
+            end
+
+            if length(tmp_series) == 44
+                Y = detrend(tmp_series);
+                X = detrend(Nino_idx(1:end));
+                clear data_series_re; clear mon_climate_mean; clear mon_climate_mean_rep; clear data_ano; clear data_ano_series;
+
+                x1=[ones(size(X,1),1), X];
+                [c,~,~,~,stats]  = regress(Y,x1);
+                r_Nino(ilat, ilon) = c(2,1);
+                p_Nino(ilat, ilon) = stats(1,3);
+            end
+        end
+    end
+
+    pattern_v(:,:,isn) = r_Nino; pattern_v_pv(:,:,isn) = p_Nino;
+end
+
+save Real_regress_pattern_v_on_nino3.4_ERSST_1979.mat pattern_v pattern_v_pv;
+
+%%  SST hadisst nino
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+lat_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','latitude');
+lon_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','longitude');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+
+mask_sst_tmp = squeeze(hadisst_per(:,:,end));
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+hadisst_per_re = imresample([1 1], hadisst_per,[reso_lon,reso_lat],'linear');
+
+lat_05deg = 90-reso_lat/2 : -reso_lat : -90+reso_lat/2;
+lon_05deg = -180+reso_lon/2:reso_lon:180-reso_lon/2;
+[glon_05deg,glat_05deg] = meshgrid(lon_05deg,lat_05deg);
+[nlat_05deg,nlon_05deg] = size(glon_05deg);
+
+display ('Generating Area Mask ...');
+map = ones(nlat_05deg,nlon_05deg);
+R = georasterref('RasterSize', [nlat_05deg nlon_05deg], ...
+    'RasterInterpretation', 'cells', 'ColumnsStartFrom', 'north', ...
+    'LatitudeLimits', [lat_05deg(end) lat_05deg(1)], 'LongitudeLimits', [lon_05deg(1) lon_05deg(end)]);
+ellipsid = referenceEllipsoid('Earth','km');
+[~,areavec] = areamat(map,R,ellipsid);
+[~,map_area0] = meshgrid(lon_05deg,areavec);
+mask_area = map_area0;
+mask_area(isnan(mask_sst)) = nan;
+%%%%%%%%%%%%%%%%开始SST选区%%%%%%%%%%%%%%%%%%%%
+nino_mask = mask_area;       % 5N-5S, 170W-120W
+nino_mask_final = mask_area;
+nino_mask(46:51,5:24) = 999; nino_mask(nino_mask~=999) = nan;
+nino_mask_final(isnan(nino_mask)) = nan;
+
+ts_re_fullperiod = hadisst_per_re(:,:,1093:1632); % 1961-1-1  1093   %2005-12-15  1632
+% ts_re_fullperiod = hadisst_per_re(:,:,361:1632+180); % 1900-1-1  1900   %2005-12-15  1632
+
+mask = nino_mask_final;
+data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%最
+mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+ss = size(data_no_areaweight);
+temp = nan(ss(1),ss(2),ss(3));
+for i = 1:ss(3)
+    temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+end
+data = temp;
+s = size(data);
+for i = 1:s(3)
+    t = squeeze(data(:,:,i));
+    data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+end
+sst_idx_obs(:,1) = movmean(data_series,5); clear data_series;
+
+Nino_re = reshape(squeeze(sst_idx_obs(:,1,:)),12,540/12);
+tmp_nino = Nino_re;
+Nino_idx = squeeze(nanmean([tmp_nino(12,1:end-1);tmp_nino(1:2,2:end)],1))';
+clear tmp_nino;
+
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+lat_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','latitude');
+lon_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','longitude');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+hadisst_per_1900_end = hadisst_per(:,:,1093:1632); % 1900-1-1  1900   %2005-12-15  1632
+
+sst_ilme = reshape(hadisst_per_1900_end,180,360,12, size(hadisst_per_1900_end,3)./12); clear ts_per_fl;
+sst_ilme_avg = nanmean(sst_ilme,4);
+sst_ilme_avg_rep = repmat(sst_ilme_avg,1, 1, 1, size(sst_ilme,4));
+sst_ilme_ano = sst_ilme - sst_ilme_avg_rep;
+clear sst_ilme; clear sst_ilme_avg; clear sst_ilme_avg_rep; clear ts_ens; clear ts_per_fl;
+
+sst_ilme_ano(sst_ilme_ano==0) = nan;
+sst_ilme_ano(sst_ilme_ano>100) = nan;
+sst_raw = sst_ilme_ano;
+
+for isn = 1:4
+
+    if isn == 1
+        sst_tmp = squeeze(nanmean(sst_raw(:,:,6:8,1:end-1),3)); %与Nino同年
+    end
+
+    if isn == 2
+        sst_tmp = squeeze(nanmean(sst_raw(:,:,9:11,1:end-1),3)); %与Nino同年
+    end
+
+    if isn == 3
+        tmp1 = [sst_raw(:,:,12,1:end-1)];
+        tmp2 = [sst_raw(:,:,1:2,2:end)];
+        pattern_tmp = tmp1;
+        pattern_tmp(:,:,2:3,:) = tmp2;
+        sst_tmp = squeeze(nanmean(pattern_tmp,3));
+        clear pattern_tmp; clear tmp1; clear tmp2;
+    end
+
+    if isn == 4
+        sst_tmp = squeeze(nanmean(sst_raw(:,:,3:5,2:end),3)); %Nino后一年
+    end
+
+r_Nino = nan(180,360); p_Nino = nan(180,360);
+
+    for ilat = 2:size(sst_tmp,1)
+        for ilon = 1:size(sst_tmp,2)
+
+            tmp_series = squeeze(sst_tmp(ilat,ilon,:));
+            index = find(isnan(tmp_series));
+            if size(index,1) > 0
+                tmp_series(index) = [];
+            end
+
+            if length(tmp_series) ==44
+                Y = detrend(tmp_series);
+                X = detrend(Nino_idx);
+
+                x1=[ones(size(X,1),1), X];
+                [c,~,~,~,stats]  = regress(Y,x1);
+                r_Nino(ilat, ilon) = c(2,1);
+                p_Nino(ilat, ilon) = stats(1,3);
+            end
+        end
+    end
+
+    pattern(:,:,isn) = r_Nino; pattern_pv(:,:,isn) = p_Nino;
+    clear r_Nino; clear p_Nino;
+end
+pattern(pattern==0) = nan; patter_pv(pattern_pv==0) = nan;
+   
+save Real_regress_pattern_sst_on_nino3.4_HadiSST_1961.mat pattern pattern_pv lat_hadi lon_hadi;
+%% figure 论文版-obs
+
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/Final_figure/Real_regress_pattern_sst_on_nino3.4_HadiSST_1961.mat')
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/Final_figure/Real_regress_pattern_u_on_nino3.4_ERSST_1979.mat')
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/Final_figure/Real_regress_pattern_v_on_nino3.4_ERSST_1979.mat')
+
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+mask_sst_tmp = squeeze(hadisst_per(:,:,end)); clear hadisst_per;
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1; reso_lon = 1;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+mask_sst_rep = repmat(mask_sst,1,1,size(pattern,3));
+pattern(isnan(mask_sst_rep)) = nan;
+pattern_pv(isnan(mask_sst_rep)) = nan;
+
+pattern_final = pattern; pattern_final(:,1:180,:) = pattern(:,181:360,:); pattern_final(:,181:360,:) = pattern(:,1:180,:);
+pattern_pv_final = pattern_pv; pattern_pv_final(:,1:180,:) = pattern_pv(:,181:360,:); pattern_pv_final(:,181:360,:) = pattern_pv(:,1:180,:);
+
+pattern_u_final = pattern_u; pattern_u_final(:,1:720,:) = pattern_u(:,721:1440,:); pattern_u_final(:,721:1440,:) = pattern_u(:,1:720,:);
+pattern_u_pv_final = pattern_u_pv; pattern_u_pv_final(:,1:720,:) = pattern_u_pv(:,721:1440,:); pattern_u_pv_final(:,721:1440,:) = pattern_u_pv(:,1:720,:);
+
+pattern_v_final = pattern_v; pattern_v_final(:,1:720,:) = pattern_v(:,721:1440,:); pattern_v_final(:,721:1440,:) = pattern_v(:,1:720,:);
+pattern_v_pv_final = pattern_v_pv; pattern_v_pv_final(:,1:720,:) = pattern_v_pv(:,721:1440,:); pattern_v_pv_final(:,721:1440,:) = pattern_v_pv(:,1:720,:);
+
+
+reso_lat = 1; reso_lon = 1;
+lat_af = 90-reso_lat/2 : -reso_lat : -90+reso_lat/2;
+lon_af = 0+reso_lon/2:reso_lon:360-reso_lon/2;
+
+page_width = 18;
+page_height = 18;
+figure('Units','centimeters',...
+       'position',[0 0 page_width page_height],...
+       'PaperPosition',[0 0 page_width page_height],...
+       'color',[1 1 1]);
+   
+% set position of three subplots
+nrow=4;
+ncol=1;
+width = 0.35;
+height = width./4.5;
+epsw = 0.1;
+epsh = 0.1;
+xstart=0.1;
+ystart=0.05;
+pos = zeros(nrow*ncol,4);
+for r=1:nrow
+    for c=1:ncol
+        pos((r-1)*ncol+c,1)=xstart + (c-1)*(width+epsw);
+        pos((r-1)*ncol+c,2)=1-(ystart+r*height+(r-1)*epsh);
+        pos((r-1)*ncol+c,3)=width;
+        pos((r-1)*ncol+c,4)=height;
+    end
+end
+
+% labels
+Label = {'JJA (0)', 'SON (0)', 'DJF (0/1)','MAM(1)'};
+Label_abc = {'e','f','g','h','i','j','k','l','m','n'};
+
+load coastlines;
+
+iiid = find(coastlon<0);
+coastlon_new = coastlon;
+coastlon_new(iiid) = coastlon(iiid)+360;
+
+coastlon_new(coastlon_new>359.5) = nan;
+coastlon_new(coastlon_new<-359.5) = nan;
+coastlat(coastlat>89.5) = nan;
+coastlat(coastlat<-89.5) = nan;
+coastlat(coastlat>-0.025&coastlat<0.025) = nan;
+
+u_pattern_re = imresample([0.25 0.25],pattern_u_final,[10,10],'linear');
+v_pattern_re = imresample([0.25 0.25], pattern_v_final,[10,10],'linear');
+
+[x,y] = meshgrid(0+5:10:360-5,90:-10:-90); 
+
+for inum = 1:nrow * ncol
+
+    ax= axes('Position',pos(inum,:),'Color','none');
+    set(ax, 'ylim' , [-30, 30],'YTick',-30:30:30,'TickDir','out', 'TickLength',[0.005/0.3, 0],...
+        'YTickLabel',{'30\circS','EQ' ,'30\circN'},'FontName','Helvetica','FontSize',12);
+
+    set(ax, 'xlim' , [0.25 359.75], 'XTick',[0:90:360],'XTickLabel',[]);
+    text(0:90:360, [-45 -45 -45 -45 -45],{'0\circ','90\circE','180\circ','90\circW', '0\circ'},...
+         'FontName','Helvetica','horizontalalignment','center','FontSize',12)
+
+    hold on %!!!!!!!!
+   imagesc( lon_af, lat_af, pattern_final(:, :, inum),'alphadata',~isnan( pattern_final(:, :, inum) ) );
+%
+    % 等值线
+    % [c,h] = contourf(lon_af, lat_af, pattern_final(:, :, inum), 'LevelList', [-100, -4 : 0.1 : 4, 100]);
+    % h.LineColor = 'none';
+    load BlueDarkRed18.mat;
+    colormap (BlueDarkRed18);
+
+    caxis([-0.9 0.9]);
+    hold on;
+
+        is_sig = pattern_pv_final  (:, :, inum);
+        seq = 8;
+
+        for iilat = 1: seq : size(is_sig,1)
+            for iilon = 1: seq : size(is_sig,2)
+
+                if is_sig(iilat,iilon) < 0.1
+                                    % line([lon_af(iilon)-0.5*seq*reso, lon_af(iilon)+0.5*seq*reso], [lat_af(iilat)-0.5*seq*reso, lat_af(iilat)+0.5*seq*reso], ...
+                                    %     'linestyle','-', 'linewidth', 0.5,'color','k');
+                                    % 
+                    plot(lon_af(iilon), lat_af(iilat),  '.','color','g','markersize', 6);                    
+                end                
+            end
+        end
+        
+    plot(coastlon_new, coastlat,'k');
+
+    ncquiverref(x,y, u_pattern_re(:,:,inum), v_pattern_re(:,:,inum),'',1, 'veccol', 'k');
+
+      % 经纬度范围
+    lat_min1 = -5; lat_max1 = 5;      % 5°N–5°S for first box
+    lon_min1 = 190; lon_max1 = 240;   % 170°W–120°W (converted to 0-360°E)
+
+    lat_min2 = 5; lat_max2 = 25;      % 5°N–25°N for second box
+    lon_min2 = 305; lon_max2 = 345;   % 55°W–15°W (converted to 0-360°E)
+
+    lat_min3 = -20; lat_max3 = 20;    % 20°S–20°N for third box
+    lon_min3 = 40; lon_max3 = 100;    % 40°E–100°E (already in 0-360°E)
+
+    % 画第一个矩形框 (170°W–120°W, 5°N–5°S)
+    lon_box1 = [lon_min1 lon_max1 lon_max1 lon_min1 lon_min1];
+    lat_box1 = [lat_min1 lat_min1 lat_max1 lat_max1 lat_min1];
+    plot(lon_box1, lat_box1,'Color', [0,0,0], 'LineStyle', '-','LineWidth', 1.25); % 红色矩形框
+
+    % 画第二个矩形框 (55°W–15°W, 5°N–25°N)
+    lon_box2 = [lon_min2 lon_max2 lon_max2 lon_min2 lon_min2];
+    lat_box2 = [lat_min2 lat_min2 lat_max2 lat_max2 lat_min2];
+    plot(lon_box2, lat_box2, 'Color', 'b', 'LineStyle', '-','LineWidth', 1.25); % 蓝色矩形框
+
+    % 画第三个矩形框 (40°E–100°E, 20°S–20°N)
+    lon_box3 = [lon_min3 lon_max3 lon_max3 lon_min3 lon_min3];
+    lat_box3 = [lat_min3 lat_min3 lat_max3 lat_max3 lat_min3];
+    plot(lon_box3, lat_box3, 'Color', [100, 30, 181]./255, 'LineStyle', '-', 'LineWidth', 1.25); % 绿色矩形框
+
+    
+    box off;
+    grid off;
+    set(ax,'layer','top');
+
+    text(359.75, 43, Label{inum},  'FontName','Helvetica','horizontalalignment','right','FontSize',12);
+    text(0, 43, Label_abc{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
+
+    box off
+    ax=gca;
+    axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none')
+end
+
+% colorbar
+cb1=colorbar(ax,'location','southoutside','position',[0.25 0.18 0.5 0.015]);
+set(cb1,'ticks', [-0.56 -0.28 0 0.28 0.56], 'XTickLabel',{'<-0.56','-0.28','0','0.28','>0.56'},'ticklength', 0.005/0.3 ,'fontsize',12);
+
+cb1ax = axes('position', cb1.Position, 'visible', 'off');
+text(cb1ax, 0.5, -4, 'Regression of SSTA on Nino3.4','Fontname','Helvetica','fontsize',12,'horizontalalignment','center' );
+% 
+img =gcf;
+print(img, '-dtiff', '-r600', './C01_Regress_on_nino3.4_HadiSST_ERA5_new_add_retangle.tif');
