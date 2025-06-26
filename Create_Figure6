@@ -1,0 +1,659 @@
+clear; clc;
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+lat_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','latitude');
+lon_hadi = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','longitude');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+
+mask_sst_tmp = squeeze(hadisst_per(:,:,end)); clear hadisst_per;
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+
+lat_05deg = 90-reso_lat/2 : -reso_lat : -90+reso_lat/2;
+lon_05deg = -180+reso_lon/2:reso_lon:180-reso_lon/2;
+[glon_05deg,glat_05deg] = meshgrid(lon_05deg,lat_05deg);
+[nlat_05deg,nlon_05deg] = size(glon_05deg);
+
+display ('Generating Area Mask ...');
+map = ones(nlat_05deg,nlon_05deg);
+R = georasterref('RasterSize', [nlat_05deg nlon_05deg], ...
+      'RasterInterpretation', 'cells', 'ColumnsStartFrom', 'north', ...
+      'LatitudeLimits', [lat_05deg(end) lat_05deg(1)], 'LongitudeLimits', [lon_05deg(1) lon_05deg(end)]);
+ellipsid = referenceEllipsoid('Earth','km');  
+[~,areavec] = areamat(map,R,ellipsid);  
+[~,map_area0] = meshgrid(lon_05deg,areavec);
+mask_area = map_area0;
+mask_area(isnan(mask_sst)) = nan;
+%%%%%%%%%%%%%%%%开始SST选区%%%%%%%%%%%%%%%%%%%%
+lat_fd_mask = lat_05deg'; lon_fd_mask = lon_05deg';
+
+%%%%%%%%%%%%%%%%%%%%%%结束SST选区%%%%%%%%%%%%%%%%%
+nino_mask = mask_area;       % 5N-5S, 170W-120W
+nino_mask_final = mask_area;
+nino_mask(46:51,5:24) = 999; nino_mask(nino_mask~=999) = nan;
+nino_mask_final(isnan(nino_mask)) = nan;
+
+nino3_mask = mask_area;       % 0-15S, 120W-80W
+nino3_mask_final = mask_area;
+nino3_mask(49:56,25:40) = 999; nino3_mask(nino_mask~=999) = nan;
+nino3_mask_final(isnan(nino3_mask)) = nan;
+
+nino_EP1_mask = mask_area;
+nino_EP1_mask_final = mask_area;
+nino_EP1_mask(46:51,29:38) = 999; nino_EP1_mask(nino_EP1_mask~=999) = nan;
+nino_EP1_mask_final(isnan(nino_EP1_mask)) = nan;
+
+nino_EP2_mask = mask_area;
+nino_EP2_mask_final = mask_area;
+nino_EP2_mask(46:51,17:28) = 999; nino_EP2_mask(nino_EP2_mask~=999) = nan;
+nino_EP2_mask_final(isnan(nino_EP2_mask)) = nan;
+
+%%%%%%%%TNA%%%%% boreal spring from March to May
+TNA_mask = mask_area; %TNA(5°N - 25°N, 55°W - 15°W,  monthly climatological seasonal cycle based on the years 1982-2005 Ref:https://stateoftheocean.osmc.noaa.gov/sur/atl/tna.php)
+TNA_mask_final = mask_area;
+TNA_mask(36:46,51:66) = 999; TNA_mask(TNA_mask~=999) = nan;
+TNA_mask_final(isnan(TNA_mask)) = nan;
+
+ATL3_mask = mask_area;  % ATL3 index 3°N–3°S, 0–20W
+ATL3_mask_final = mask_area;
+ATL3_mask(47:50,65:72) = 999; ATL3_mask(ATL3_mask~=999) = nan;
+ATL3_mask_final(isnan(ATL3_mask)) = nan;
+
+AMO_mask = mask_area; %(0 to 60°N, 0 to 80°W)
+AMO_mask_final = mask_area;
+AMO_mask(17:48,41:72) = 999; AMO_mask(AMO_mask~=999) = nan;
+AMO_mask_final(isnan(AMO_mask)) = nan;
+
+
+%%%%%%%IOB%%%%%%%boreal spring from March to May
+IOB_mask = mask_area; %20°S‒20°N and 40‒115°E
+IOB_mask_final = mask_area;
+IOB_mask(38:59,89:118) = 999; IOB_mask(IOB_mask~=999) = nan;
+IOB_mask_final(isnan(IOB_mask)) = nan;
+%%%%%%%IOD%%%%%%%boreal fall from September to November
+%https://www.nature.com/articles/s41612-022-00305-y#Sec8
+
+%the SSTA difference between the western Indian Ocean (i.e., 10°S‒10°N and 50‒70°E) and the southeastern Indian Ocean (i.e., 10°S‒0 and 90‒110°E)
+WTIO_mask = mask_area; %10°S‒10°N and 50‒70°E
+WTIO_mask_final = mask_area; 
+WTIO_mask(44:53,93:100) = 999; WTIO_mask(WTIO_mask~=999) = nan;
+WTIO_mask_final(isnan(WTIO_mask))=nan;
+
+ETIO_mask = mask_area; %10°S‒0 and 90‒110°E
+ETIO_mask_final = mask_area; 
+ETIO_mask(49:53,109:116) = 999; ETIO_mask(ETIO_mask~=999) = nan;
+ETIO_mask_final(isnan(ETIO_mask)) = nan;
+%%%% global mask
+global_mask = mask_area;       % 5N-5S, 170W-120W
+%%%%%%%%%%计算各个指数%%%%%%%%%%%%
+%
+load iLME_full_ts_mme.mat ts_per_fl lat_af lon_af time_850_1849 time_1850_2005;
+run = 1:15; %%%%%%%!!!!!!change
+sst_idx = nan(13872,12,run(end));
+
+for irun = 1:15
+    ts_re_fullperiod = squeeze(ts_per_fl(:,:,:,irun));
+
+    %(1)
+    mask = nino_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%最
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,1,irun) = data_series; clear data_series;
+
+    %(2)
+    mask = TNA_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,2,irun) = data_series; clear data_series;%TNA 
+
+  
+    %(3)
+    mask = IOB_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,3,irun) = data_series; clear data_series;
+
+
+    %(4)
+    mask = WTIO_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,4,irun) = data_series; clear data_series;
+
+
+    %(5)
+    mask = ETIO_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,5,irun) = data_series; clear data_series;
+
+    sst_idx(:,6,irun) = squeeze(sst_idx(:,4,irun)) - squeeze(sst_idx(:,5,irun));
+
+
+    %(7)
+    mask = nino_EP1_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,7,irun) = data_series; clear data_series;
+
+
+    %(8)
+    mask = nino_EP2_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,8,irun) = data_series; clear data_series;
+
+    %(9)
+    mask = ATL3_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,9,irun) = data_series; clear data_series;%TNA 
+
+    %nino3 region
+    %(10)
+    mask = nino3_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,10,irun) = data_series; clear data_series;%TNA 
+
+    %(11)
+    mask = AMO_mask_final;
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,11,irun) = data_series; clear data_series;%TNA 
+
+
+% (12)
+    mask = global_mask;
+     
+    data_no_areaweight = ts_re_fullperiod; %!!!!%%%%%
+    mask_2D_mean = nanmean(reshape(mask,size(mask,1)*size(mask,2),1)); %%% 或：mask_2D_mean = nanmean(mask(:));
+    ss = size(data_no_areaweight);
+    temp = nan(ss(1),ss(2),ss(3));
+    for i = 1:ss(3)
+        temp(:,:,i) = data_no_areaweight(:,:,i).*mask./mask_2D_mean;    % 把ET数据转换为加权后的，以求加权平均值
+    end
+    data = temp;
+    s = size(data);
+    for i = 1:s(3)
+        t = squeeze(data(:,:,i));
+        data_series(i,1) = nanmean(reshape(t,size(data,1)*size(data,2),1));
+    end
+    sst_idx(:,12,irun) = data_series; clear data_series;%TNA 
+end
+
+save sst_idx_850-2005_ILME_FULL_15ens_with_globalsst.mat sst_idx time_850_1849 time_1850_2005;
+%%
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/sst_idx_850-2005_ILME_FULL_15ens_with_globalsst.mat')
+Nino_series = squeeze(sst_idx(:,1,:));
+TNA_series = squeeze(sst_idx(:,2,:));
+IOD_series = squeeze(sst_idx(:,6,:));
+IOB_series = squeeze(sst_idx(:,3,:));
+global_series = squeeze(sst_idx(:,12,:));
+
+yr = 850:2005; yr = yr';
+sst_idx_real = sst_idx;
+sst_idx_real(:,1:5,:) = sst_idx_real(:,1:5,:) - 273.15; 
+sst_idx_real(:,7:12,:) = sst_idx_real(:,7:12,:) - 273.15; 
+
+sst_idx_iwd_re = reshape(sst_idx_real,12,1156,12,15);
+sst_idx_wd_season_mean = nanmean(sst_idx_iwd_re,2);
+sst_idx_wd_season_mean_rep = repmat(sst_idx_wd_season_mean ,1,1156,1,1);
+sst_idx_wd_ano = sst_idx_iwd_re - sst_idx_wd_season_mean_rep;
+
+for iens = 1:15
+    Nino_mon_re = squeeze(sst_idx_wd_ano(:,:,1,iens));
+    Nino_series = squeeze(nanmean([Nino_mon_re(12,1:end-1);Nino_mon_re(1:2,2:end)],1))';
+
+    TNA_mon_re = squeeze(sst_idx_wd_ano(:,:,2,iens));
+    TNA_series = nanmean(TNA_mon_re(3:5,:),1)';
+
+    IOB_mon_re = squeeze(sst_idx_wd_ano(:,:,3,iens));
+    IOB_series = nanmean(IOB_mon_re(3:5,:),1)';
+
+    global_mon_re = squeeze(sst_idx_wd_ano(:,:,12,iens));
+    global_series = nanmean(global_mon_re(1:12,:),1)';
+
+
+    X = detrend(Nino_series);
+    Y = detrend(TNA_series(2:end,1));
+    x1=[ones(size(X,1),1), X];
+    [c,~,~,~,stats]  = regress(Y,x1);
+    TNA_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+    TNA_ano_no_nino = Y - TNA_ano_relate_nino; %第2-50yr
+    clear X; clear x1; clear Y; clear c; clear stats;
+
+    X = detrend(Nino_series);
+    Y = detrend(IOB_series(2:end,1));
+    x1=[ones(size(X,1),1), X];
+    [c,~,~,~,stats]  = regress(Y,x1);
+    IOB_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+    IOB_ano_no_nino = Y - IOB_ano_relate_nino; %第2-50yr
+    clear X; clear x1; clear Y; clear c; clear stats;
+
+    Nino_series_fn(:,iens) = Nino_series;
+    IOB_series_fn(:,iens) = IOB_series;
+    TNA_series_fn(:,iens) = TNA_series;
+    global_series_fn(:,iens) = global_series;
+
+end
+
+
+data_series = nan(1156,4,15,31);
+
+for iens = 1:15    
+    for iwd = 16:1:985           
+        data_avg(iwd,1,iens) = nanmean(Nino_series_fn(iwd-15:iwd+15,iens),1);
+        data_avg(iwd,2,iens) = nanmean(TNA_series_fn(iwd-15:iwd+15,iens),1);
+        data_avg(iwd,3,iens) = nanmean(IOB_series_fn(iwd-15:iwd+15,iens),1);
+        data_avg(iwd,4,iens) = nanmean(global_series_fn(iwd-15:iwd+15,iens),1);
+
+        data_series(iwd,1,iens,1:31) = Nino_series_fn(iwd-15:iwd+15,iens);
+        data_series(iwd,2,iens,:) = TNA_series_fn(iwd-15:iwd+15,iens);
+        data_series(iwd,3,iens,:) = IOB_series_fn(iwd-15:iwd+15,iens);
+        data_series(iwd,4,iens,:) = global_series_fn(iwd-15:iwd+15,iens);
+
+    end
+end
+%% 计算高低avg时期的那31年的time series data
+data_avg_point = nan(1156,4,15);
+series_hi_avg = nan(1156,4,15,31);
+series_lw_avg = nan(1156,4,15,31);
+
+for iens = 1:15
+    for i = 16:31:985
+        data_avg_point(i,:,iens) = data_avg(i,:,iens);
+    end
+end
+data_avg_point(data_avg_point==0) =nan;
+
+for iens = 1:15
+    for ivar = 1:4
+        clear lw_avg; clear hi_avg;
+        clear avg; clear std;
+        clear data_avg_ivar;
+        data_avg_ivar = data_avg_point(:,ivar,iens); data_avg_ivar(data_avg_ivar==0) = nan;
+        avg = nanmean(data_avg_ivar);
+        std = nanstd(data_avg_ivar);
+        hi_avg = find(data_avg_ivar>avg+0.5*std);
+        lw_avg = find(data_avg_ivar<avg-0.5*std);
+        series_hi_avg(1:length(hi_avg),ivar,iens,:) = data_series(hi_avg,ivar,iens,:);
+        series_lw_avg(1:length(lw_avg),ivar,iens,:) = data_series(lw_avg,ivar,iens,:);
+    
+    end
+end
+
+%%
+load('Granger_NINOTNA_30yr.mat');
+R_Nino2TNA = F21;
+P_Nino2TNA = sig21;
+R_TNA2Nino = F12;
+P_TNA2Nino = sig21;
+clear F21; clear F12; clear sig21; clear sig12;
+
+load('Granger_NINOIOD_30yr.mat');
+R_Nino2IOD = F21;
+P_Nino2IOD = sig21;
+clear F21; clear F12; clear sig21; clear sig12;
+
+load('Granger_NINOIOB_30yr.mat');
+R_Nino2IOB = F21;
+P_Nino2IOB = sig21;
+R_IOB2Nino = F12;
+P_IOB2Nino = sig12;
+clear F21; clear F12; clear sig21; clear sig12;
+
+Nino2TNA_point = nan(1156,15);
+Nino2IOB_point = nan(1156,15);
+
+for iens = 1:15
+    for i = 16:31:985
+        Nino2TNA_point(i,iens) = R_Nino2TNA(i,iens);
+        Nino2IOB_point(i,iens) = R_Nino2IOB(i,iens);
+    end
+end
+%%
+Nino2TNA_hi_avg  = nan(1000,15,5);
+Nino2TNA_lw_avg  = nan(1000,15,5);
+Nino2IOB_hi_avg  = nan(1000,15,5);
+Nino2IOB_lw_avg  = nan(1000,15,5);
+ 
+for iens = 1:15
+    for ivar = 1:4
+        data_avg_ivar = data_avg_point(:,ivar,iens);
+        avg = nanmean(data_avg_ivar);
+        std = nanstd(data_avg_ivar);
+        hi_avg = find(data_avg_ivar>avg+0.5*std);
+        lw_avg = find(data_avg_ivar<avg-0.5*std);
+        Nino2TNA_hi_avg(1:length(hi_avg),iens,ivar) = Nino2TNA_point(hi_avg,iens);
+        Nino2IOB_hi_avg(1:length(hi_avg),iens,ivar) = Nino2IOB_point(hi_avg,iens);
+        clear hi_avg;
+        Nino2TNA_lw_avg(1:length(lw_avg),iens,ivar) = Nino2TNA_point(lw_avg,iens);
+        Nino2IOB_lw_avg(1:length(lw_avg),iens,ivar) = Nino2IOB_point(lw_avg,iens);
+        clear lw_avg;
+        clear avg; clear std;
+    end
+end
+%% 计算显著性
+
+for ivar = 1:4
+    Nino2TNA_hi_avg_ivar = Nino2TNA_hi_avg(:,:,ivar);
+    Nino2TNA_lw_avg_ivar = Nino2TNA_lw_avg(:,:,ivar);
+    Nino2IOB_hi_avg_ivar = Nino2IOB_hi_avg(:,:,ivar);
+    Nino2IOB_lw_avg_ivar = Nino2IOB_lw_avg(:,:,ivar);
+
+    Nino2TNA_hi_avg_ivar_re = reshape(Nino2TNA_hi_avg_ivar,size(Nino2TNA_hi_avg_ivar,1)*size(Nino2TNA_hi_avg_ivar,2),1); Nino2TNA_hi_avg_ivar_re(isnan(Nino2TNA_hi_avg_ivar_re)) = [];
+    Nino2TNA_lw_avg_ivar_re = reshape(Nino2TNA_lw_avg_ivar,size(Nino2TNA_lw_avg_ivar,1)*size(Nino2TNA_lw_avg_ivar,2),1); Nino2TNA_lw_avg_ivar_re(isnan(Nino2TNA_lw_avg_ivar_re)) = [];
+    Nino2IOB_hi_avg_ivar_re = reshape(Nino2IOB_hi_avg_ivar,size(Nino2IOB_hi_avg_ivar,1)*size(Nino2IOB_hi_avg_ivar,2),1); Nino2TNA_hi_avg_ivar_re(isnan(Nino2TNA_hi_avg_ivar_re)) = [];
+    Nino2IOB_lw_avg_ivar_re = reshape(Nino2IOB_lw_avg_ivar,size(Nino2IOB_lw_avg_ivar,1)*size(Nino2IOB_lw_avg_ivar,2),1); Nino2TNA_hi_avg_ivar_re(isnan(Nino2TNA_hi_avg_ivar_re)) = [];
+
+    [p,h] = ttest2( Nino2TNA_hi_avg_ivar_re, Nino2TNA_lw_avg_ivar_re  , 'Alpha',0.1);
+    h_TNA = h
+    p_TNA = p
+    hi_TNA = nanmean(Nino2TNA_hi_avg_ivar_re)
+    lw_TNA = nanmean(Nino2TNA_lw_avg_ivar_re)
+    [p,h] = ttest2( Nino2IOB_hi_avg_ivar_re, Nino2IOB_lw_avg_ivar_re  , 'Alpha',0.1);
+    h_IOB = h
+    p_IOB = p
+    hi_IOB = nanmean(Nino2IOB_hi_avg_ivar_re)
+    lw_IOB = nanmean(Nino2IOB_lw_avg_ivar_re)
+end
+
+%% 概率密度图 std NinoTNA Fn 20240905
+page_width = 18;
+page_height = 18;
+figure('Units','centimeters',...
+    'position',[0 0 page_width page_height],...
+    'PaperPosition',[0 0 page_width page_height],...
+    'color',[1 1 1]);
+
+nrow=4;
+ncol=1;
+width = 0.25;
+height = 0.2;
+epsw = 0.15;
+epsh = 0.0;
+xstart=0.125;
+ystart=0.025;
+pos = zeros(nrow*ncol,4);
+for r=1:nrow
+    for c=1:ncol
+        pos((r-1)*ncol+c,1)=xstart + (c-1)*(width+epsw);
+        pos((r-1)*ncol+c,2)=1-(ystart+r*height+(r-1)*epsh);
+        pos((r-1)*ncol+c,3)=width;
+        pos((r-1)*ncol+c,4)=height;
+    end
+end
+
+color_line = [[160 85 49]./255; [180 136 137]./255;  [87 113 96]./255; [168 194 113]./255; [247 160 43]./255; [249 221 171]./255; [87 113 96]./255; [168 194 113]./255];
+
+for inum = 1:4
+
+    ax= axes('Position',pos(inum,:),'Color','none');
+    set(ax, 'ylim' , [0 20],'YTick',5:5:15,'TickDir','out', 'Color', 'none','TickDir','out', 'TickLength',[0.01/0.2, 0],'FontName','Helvetica','FontSize',12,'YTickLabel',{'5','10','15'});
+
+    %
+    hold on;
+    if inum==4
+        set(ax, 'xlim' , [0 0.4], 'XTick',0:0.05:0.4, 'FontName','Helvetica','FontSize',12,'TickDir','out', 'TickLength',[0.005/0.2, 0],'XTickLabel',{'0','','0.1','','0.2','','0.3','','0.4'});
+        xtickangle(45);
+    else
+        set(ax, 'xlim' , [0 0.4], 'XTick',[], 'FontName','Helvetica','FontSize',12,'TickDir','out', 'TickLength',[0.005/0.2, 0],'XTickLabel',{'0','','0.1','','0.2','','0.3'});
+        xtickangle(45);
+    end
+
+    clear data1;  clear data2; clear len; clear tmp; clear s;
+
+    Nino2TNA_hi_avg_ivar = Nino2TNA_hi_avg(:,:,inum);
+    Nino2TNA_lw_avg_ivar = Nino2TNA_lw_avg(:,:,inum);
+    Nino2TNA_hi_avg_ivar_re = reshape(Nino2TNA_hi_avg_ivar,size(Nino2TNA_hi_avg_ivar,1)*size(Nino2TNA_hi_avg_ivar,2),1); Nino2TNA_hi_avg_ivar_re(isnan(Nino2TNA_hi_avg_ivar_re)) = [];
+    Nino2TNA_lw_avg_ivar_re = reshape(Nino2TNA_lw_avg_ivar,size(Nino2TNA_lw_avg_ivar,1)*size(Nino2TNA_lw_avg_ivar,2),1); Nino2TNA_lw_avg_ivar_re(isnan(Nino2TNA_lw_avg_ivar_re)) = [];
+
+    data1 = Nino2TNA_hi_avg_ivar_re;
+    data2 = Nino2TNA_lw_avg_ivar_re;
+
+    x_values = 0:0.001:0.4;
+    data1_fit = fitdist(data1,'normal');
+    data1pdf = pdf(data1_fit,x_values);
+
+    data2_fit = fitdist(data2,'normal');
+    data2pdf = pdf(data2_fit,x_values);
+
+    if inum==1
+        plot(ax, x_values , data1pdf, '-', 'Color', color_line(1,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        hold on;
+        plot(ax, x_values , data2pdf, '-', 'Color', color_line(2,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+    end
+
+    if inum==2
+        plot(ax, x_values , data1pdf, '-', 'Color', color_line(3,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        hold on;
+        plot(ax, x_values , data2pdf, '-', 'Color', color_line(4,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+    end
+
+    if inum==3
+        plot(ax, x_values , data1pdf, '-', 'Color', color_line(5,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        hold on;
+        plot(ax, x_values , data2pdf, '-', 'Color', color_line(6,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+    end
+
+       if inum==4
+        plot(ax, x_values , data1pdf, '-', 'Color', 'k', 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        hold on;
+        plot(ax, x_values , data2pdf, '-', 'Color', [121 120 120]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+       end
+
+       clear data1_fit; clear data1pdf; clear data2_fit; clear data2pdf;
+
+    hold on;
+    ax=gca;
+    axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+
+end
+%
+img =gcf;
+print(img, '-dtiff', '-r600', './New_avg_ENSOTNA_0.5std_850_1850_new_global.tif');
+%% 概率密度图 std NinoIOB Fn 20240905
+page_width = 18;
+page_height = 18;
+figure('Units','centimeters',...
+    'position',[0 0 page_width page_height],...
+    'PaperPosition',[0 0 page_width page_height],...
+    'color',[1 1 1]);
+
+nrow=4;
+ncol=1;
+width = 0.25;
+height = 0.2;
+epsw = 0.15;
+epsh = 0.0;
+xstart=0.125;
+ystart=0.025;
+pos = zeros(nrow*ncol,4);
+for r=1:nrow
+    for c=1:ncol
+        pos((r-1)*ncol+c,1)=xstart + (c-1)*(width+epsw);
+        pos((r-1)*ncol+c,2)=1-(ystart+r*height+(r-1)*epsh);
+        pos((r-1)*ncol+c,3)=width;
+        pos((r-1)*ncol+c,4)=height;
+    end
+end
+
+color_line = [[160 85 49]./255; [180 136 137]./255;  [87 113 96]./255; [168 194 113]./255; [247 160 43]./255; [249 221 171]./255; [87 113 96]./255; [168 194 113]./255];
+
+for inum = 1:4
+
+    ax= axes('Position',pos(inum,:),'Color','none');
+    set(ax, 'ylim' , [0 20],'YTick',5:5:15,'TickDir','out', 'Color', 'none','TickDir','out', 'TickLength',[0.01/0.2, 0],'FontName','Helvetica','FontSize',12,'YTickLabel',{'5','10','15'});
+
+    %
+    hold on;
+    if inum==4
+        set(ax, 'xlim' , [0 0.3], 'XTick',0:0.05:0.3, 'FontName','Helvetica','FontSize',12,'TickDir','out', 'TickLength',[0.005/0.2, 0],'XTickLabel',{'0','','0.1','','0.2','','0.3'});
+        xtickangle(45);
+    else
+        set(ax, 'xlim' , [0 0.3], 'XTick',[], 'FontName','Helvetica','FontSize',12,'TickDir','out', 'TickLength',[0.005/0.2, 0],'XTickLabel',{'0','','0.1','','0.2','','0.3'});
+        xtickangle(45);
+    end
+
+    clear data1;  clear data2; clear len; clear tmp; clear s;
+
+    Nino2IOB_hi_avg_ivar = Nino2IOB_hi_avg(:,:,inum);
+    Nino2IOB_lw_avg_ivar = Nino2IOB_lw_avg(:,:,inum);
+    Nino2IOB_hi_avg_ivar_re = reshape(Nino2IOB_hi_avg_ivar,size(Nino2IOB_hi_avg_ivar,1)*size(Nino2IOB_hi_avg_ivar,2),1); Nino2IOB_hi_avg_ivar_re(isnan(Nino2IOB_hi_avg_ivar_re)) = [];
+    Nino2IOB_lw_avg_ivar_re = reshape(Nino2IOB_lw_avg_ivar,size(Nino2IOB_lw_avg_ivar,1)*size(Nino2IOB_lw_avg_ivar,2),1); Nino2IOB_lw_avg_ivar_re(isnan(Nino2IOB_lw_avg_ivar_re)) = [];
+
+    data1 = Nino2IOB_hi_avg_ivar_re;
+    data2 = Nino2IOB_lw_avg_ivar_re;
+
+    x_values = 0:0.001:0.3;
+    data1_fit = fitdist(data1,'normal');
+    data1pdf = pdf(data1_fit,x_values);
+
+    data2_fit = fitdist(data2,'normal');
+    data2pdf = pdf(data2_fit,x_values);
+
+    if inum==1
+        plot(ax, x_values , data1pdf, '-', 'Color', color_line(1,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        hold on;
+        plot(ax, x_values , data2pdf, '-', 'Color', color_line(2,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+    end
+
+    if inum==2
+        plot(ax, x_values , data1pdf, '-', 'Color', color_line(3,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        hold on;
+        plot(ax, x_values , data2pdf, '-', 'Color', color_line(4,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+    end
+
+    if inum==3
+        plot(ax, x_values , data1pdf, '-', 'Color', color_line(5,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        hold on;
+        plot(ax, x_values , data2pdf, '-', 'Color', color_line(6,:), 'LineWidth', 1.5, 'LineJoin' ,'miter');
+    end
+
+       if inum==4
+        plot(ax, x_values , data1pdf, '-', 'Color', 'k', 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        hold on;
+        plot(ax, x_values , data2pdf, '-', 'Color', [121 120 120]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+       end
+
+       clear data1_fit; clear data1pdf; clear data2_fit; clear data2pdf;
+
+    hold on;
+    ax=gca;
+    axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+
+end
+%
+img =gcf;
+print(img, '-dtiff', '-r600', './New_avg_ENSOIOB_0.5std_850_1850_new_global.tif');
