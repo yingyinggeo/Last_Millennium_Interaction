@@ -1,0 +1,907 @@
+%% 无喷发组
+%  calculate sst index ano in rolling window (10yr)
+load('sst_idx_850-2005_ILME_SSI_VSK_5ens.mat');
+sst_idx_exp = sst_idx(1:12000,:,:);
+load('sst_idx_850-2005_ILME_GHG_5ens.mat');
+sst_idx_exp(:,:,6:10) = sst_idx(1:12000,:,:);
+clear sst_idx; sst_idx = sst_idx_exp;
+
+
+for iens = 1:10
+    sst_idx = squeeze(sst_idx_exp(:,:,iens));
+
+    for iwd = 6:995
+
+        sst_idx_iwd = sst_idx((iwd-5)*12+1:(iwd+5)*12,:)-273.15;
+        
+        sst_idx_iwd_re = reshape(sst_idx_iwd,12,size(sst_idx_iwd,1)./12,11);
+        sst_idx_wd_season_mean = nanmean(sst_idx_iwd_re,2);
+        sst_idx_wd_season_mean_rep = repmat(sst_idx_wd_season_mean ,1,size(sst_idx_iwd,1)./12,1);
+        sst_idx_wd_ano = sst_idx_iwd_re - sst_idx_wd_season_mean_rep;
+
+        %Nino
+        Nino_mon_re = sst_idx_wd_ano(:,:,1);
+        Nino_series = squeeze(nanmean([Nino_mon_re(12,1:end-1);Nino_mon_re(1:2,2:end)],1))';
+    
+        Nino_ano(:,iwd,iens) =Nino_series;
+        clear Nino_series; clear Nino_mon_re; clear sst_idx_iwd; clear sst_idx_iwd_re; clear sst_idx_wd_season_mean; clear sst_idx_wd_season_mean_rep; clear  sst_idx_wd_ano;
+    end
+    clear sst_idx;
+end
+save Nino_series_no_Vol_exp.mat Nino_ano;
+% calculate sst_ano in rolling window (10yr)
+
+load('iLME_SSI_VSK_ts_mme.mat');
+sst = ts_per_fl(:,:,1:12000,:); clear ts_per_fl;
+load('iLME_GHG_ts_mme.mat')
+sst(:,:,:,6:10) = ts_per_fl(:,:,1:12000,:); clear ts_per_fl;
+
+sst_global = nanmean(sst,[1 2]);
+sst_global_rep = repmat(sst_global,[96 144 1 1]);
+sst_relative = sst-sst_global;
+sst_for_cal_relative_nino = squeeze(sst_global);
+
+for iens = 1:10
+    sst_iens = squeeze(sst_relative(:,:,:,iens));
+
+    for iwd = 6:995
+        sst_iwd = sst_iens(:,:,(iwd-5)*12+1:(iwd+5)*12);
+        sst_iwd_re = reshape(sst_iwd, 96,144, 12,10);
+        sst_iwd_seasonal_mean = squeeze(nanmean(sst_iwd_re,4));
+        sst_ilme_avg_rep = repmat(sst_iwd_seasonal_mean,[1 1 1 10]);
+        sst_ilme_ano = sst_iwd_re - sst_ilme_avg_rep;
+        sst_tmp = sst_ilme_ano(:,:,12,1:end-1); 
+        sst_tmp(:,:,2:3,:) = sst_ilme_ano(:,:,1:2,2:end);
+        sst_DJF = squeeze(nanmean(sst_tmp,3));
+        sst_MAM = squeeze(nanmean(sst_ilme_ano(:,:,3:5,:),3));
+        sst_JJA = squeeze(nanmean(sst_ilme_ano(:,:,6:8,:),3));
+        sst_SON = squeeze(nanmean(sst_ilme_ano(:,:,9:11,:),3));
+
+        sst_DJF_iens (:,:,:,iwd,iens) = sst_DJF;
+        sst_MAM_iens (:,:,:,iwd,iens) = sst_MAM; 
+        sst_JJA_iens (:,:,:,iwd,iens) = sst_JJA;
+        sst_SON_iens (:,:,:,iwd,iens) = sst_SON;
+
+        clear sst_iwd; clear sst_iwd_re; clear sst_iwd_seasonal_mean; clear sst_ilme_avg_rep; clear sst_ilme_ano; clear sst_tmp; clear sst_DJF; clear sst_MAM; clear sst_JJA; clear sst_SON;
+    end
+    clear sst_iens;
+end
+
+save sst_pattern_no_vol_relative.mat sst_DJF_iens sst_MAM_iens sst_JJA_iens sst_SON_iens;
+
+%%
+% select vol_year
+load Nino_ano.mat;
+load sst_pattern.mat;
+yr = 850:1849; yr = yr';
+tropical = [409 435 960 966];
+northern = [327 364 751 792 913 986];
+southern = [426 492 603];
+
+icase = 1;
+if icase ==1;  vol_yr = tropical; end
+if icase ==2; vol_yr = northern; end
+if icase ==3; vol_yr = southern; end
+
+sst_pattern_DJF_volyr = sst_DJF_iens(:,:,:,vol_yr,:);
+sst_pattern_MAM_volyr = sst_MAM_iens(:,:,:,vol_yr,:);
+sst_pattern_JJA_volyr = sst_JJA_iens(:,:,:,vol_yr,:);
+sst_pattern_SON_volyr = sst_SON_iens(:,:,:,vol_yr,:);
+
+sst_pattern_DJF_volyr_re = reshape(sst_pattern_DJF_volyr,96,144,9,size(sst_pattern_DJF_volyr,4).*size(sst_pattern_DJF_volyr,5));
+sst_pattern_MAM_volyr_re = reshape(sst_pattern_MAM_volyr,96,144,10,size(sst_pattern_MAM_volyr,4).*size(sst_pattern_MAM_volyr,5));
+sst_pattern_JJA_volyr_re = reshape(sst_pattern_JJA_volyr,96,144,10,size(sst_pattern_JJA_volyr,4).*size(sst_pattern_JJA_volyr,5));
+sst_pattern_SON_volyr_re = reshape(sst_pattern_JJA_volyr,96,144,10,size(sst_pattern_JJA_volyr,4).*size(sst_pattern_JJA_volyr,5));
+
+
+Nino_volyr = Nino_ano(:,vol_yr,:);
+Nino_volyr_re = reshape(Nino_volyr, size(Nino_volyr,1), size(Nino_volyr,2).*size(Nino_volyr,3));
+
+
+for ilat = 1:size(sst_pattern_DJF_volyr_re,1)
+    for ilon = 1:size(sst_pattern_DJF_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_DJF_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(6,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_DJF0(ilat, ilon) = c(2,1);
+            p_Nino_DJF0(ilat, ilon) = stats(1,3);
+        end
+        clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+
+save regress_nino3.4_DJFSST_yr0.mat  r_Nino_DJF0 p_Nino_DJF0;
+
+
+
+for ilat = 1:size(sst_pattern_DJF_volyr_re,1)
+    for ilon = 1:size(sst_pattern_DJF_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_DJF_volyr_re(ilat,ilon,:,:));
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3      
+            Y = squeeze(tmp_series(7,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_DJF1(ilat, ilon) = c(2,1);
+            p_Nino_DJF1(ilat, ilon) = stats(1,3);
+        end
+        clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_DJFSST_yr1.mat  r_Nino_DJF1 p_Nino_DJF1;
+
+for ilat = 1:size(sst_pattern_DJF_volyr_re,1)
+    for ilon = 1:size(sst_pattern_DJF_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_DJF_volyr_re(ilat,ilon,:,:));
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3      
+            Y = squeeze(tmp_series(8,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_DJF2(ilat, ilon) = c(2,1);
+            p_Nino_DJF2(ilat, ilon) = stats(1,3);
+        end
+        clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_DJFSST_yr2.mat   r_Nino_DJF2 p_Nino_DJF2;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_MAM_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(7,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_MAM1(ilat, ilon) = c(2,1);
+            p_Nino_MAM2(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+
+    end
+end
+save regress_nino3.4_MAMSST_yr1.mat  r_Nino_MAM1 p_Nino_MAM1;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_MAM_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(8,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_MAM2(ilat, ilon) = c(2,1);
+            p_Nino_MAM2(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_MAMSST_yr2.mat  r_Nino_MAM2 p_Nino_MAM2;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_MAM_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(9,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_MAM3(ilat, ilon) = c(2,1);
+            p_Nino_MAM3(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_MAMSST_yr3.mat r_Nino_MAM3 p_Nino_MAM3;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_JJA_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(7,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_JJA1(ilat, ilon) = c(2,1);
+            p_Nino_JJA1(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_JJASST_yr1.mat  r_Nino_JJA1 p_Nino_JJA1;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_JJA_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(8,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_JJA2(ilat, ilon) = c(2,1);
+            p_Nino_JJA2(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_JJASST_yr2.mat  r_Nino_JJA2 p_Nino_JJA2;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_JJA_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(9,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_JJA3(ilat, ilon) = c(2,1);
+            p_Nino_JJA3(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_JJASST_yr3.mat  r_Nino_JJA3 p_Nino_JJA3;
+
+
+% SON
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_SON_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(7,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_SON1(ilat, ilon) = c(2,1);
+            p_Nino_SON1(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_SONSST_yr1.mat  r_Nino_SON1  p_Nino_SON1;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_SON_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(8,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_SON2(ilat, ilon) = c(2,1);
+            p_Nino_SON2(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_SONSST_yr2.mat  r_Nino_SON2  p_Nino_SON2;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_SON_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(9,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_SON3(ilat, ilon) = c(2,1);
+            p_Nino_SON3(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_SONSST_yr3.mat r_Nino_SON3  p_Nino_SON3;
+%% 有喷发组
+load('sst_idx_850-1849_ILME_vol_6_ens.mat')
+sst_idx_exp = sst_idx(1:12000,:,:);
+load('/glade/work/yingyingfeng/CESM-LME/sst_idx_850-2005_ILME_FULL_15ens.mat')
+sst_idx_exp(:,:,7:21) = sst_idx(1:12000,:,:);
+clear sst_idx; sst_idx = sst_idx_exp;
+
+for iens = 1:21
+    sst_idx = squeeze(sst_idx_exp(:,:,iens));
+
+    for iwd = 6:995
+
+        sst_idx_iwd = sst_idx((iwd-5)*12+1:(iwd+5)*12,:)-273.15;
+        
+        sst_idx_iwd_re = reshape(sst_idx_iwd,12,size(sst_idx_iwd,1)./12,11);
+        sst_idx_wd_season_mean = nanmean(sst_idx_iwd_re,2);
+        sst_idx_wd_season_mean_rep = repmat(sst_idx_wd_season_mean ,1,size(sst_idx_iwd,1)./12,1);
+        sst_idx_wd_ano = sst_idx_iwd_re - sst_idx_wd_season_mean_rep;
+
+        %Nino
+        Nino_mon_re = sst_idx_wd_ano(:,:,1);
+        Nino_series = squeeze(nanmean([Nino_mon_re(12,1:end-1);Nino_mon_re(1:2,2:end)],1))';
+    
+        Nino_ano(:,iwd,iens) =Nino_series;
+        clear Nino_series; clear Nino_mon_re; clear sst_idx_iwd; clear sst_idx_iwd_re; clear sst_idx_wd_season_mean; clear sst_idx_wd_season_mean_rep; clear  sst_idx_wd_ano;
+    end
+    clear sst_idx;
+end
+save Nino_ano_vol_yes.mat Nino_ano;
+% calculate sst_ano in rolling window (10yr)
+
+load('iLME_VOL_ts_mme_850_1849.mat');
+sst = ts_per_fl(:,:,1:12000,:); clear ts_per_fl;
+load('/glade/work/yingyingfeng/CESM-LME/iLME_full_ts_mme.mat')
+sst(:,:,:,7:21) = ts_per_fl(:,:,1:12000,:); clear ts_per_fl;
+
+sst_global = nanmean(sst,[1 2]);
+sst_global_rep = repmat(sst_global,[96 144 1 1]);
+sst_relative = sst-sst_global;
+
+
+for iens = 1:21
+    sst_iens = squeeze(sst_relative(:,:,:,iens));
+
+    for iwd = 6:995
+        sst_iwd = sst_iens(:,:,(iwd-5)*12+1:(iwd+5)*12,:);
+        sst_iwd_re = reshape(sst_iwd, 96,144, 12,10);
+        sst_iwd_seasonal_mean = squeeze(nanmean(sst_iwd_re,4));
+        sst_ilme_avg_rep = repmat(sst_iwd_seasonal_mean,[1 1 1 10]);
+        sst_ilme_ano = sst_iwd_re - sst_ilme_avg_rep;
+        sst_tmp = sst_ilme_ano(:,:,12,1:end-1); 
+        sst_tmp(:,:,2:3,:) = sst_ilme_ano(:,:,1:2,2:end);
+        sst_DJF = squeeze(nanmean(sst_tmp,3));
+        sst_MAM = squeeze(nanmean(sst_ilme_ano(:,:,3:5,:),3));
+        sst_JJA = squeeze(nanmean(sst_ilme_ano(:,:,6:8,:),3));
+        sst_SON = squeeze(nanmean(sst_ilme_ano(:,:,9:11,:),3));
+
+        sst_DJF_iens (:,:,:,iwd,iens) = sst_DJF;
+        sst_MAM_iens (:,:,:,iwd,iens) = sst_MAM;
+        sst_JJA_iens (:,:,:,iwd,iens) = sst_JJA;
+        sst_SON_iens (:,:,:,iwd,iens) = sst_SON;
+
+        clear sst_iwd; clear sst_iwd_re; clear sst_iwd_seasonal_mean; clear sst_ilme_avg_rep; clear sst_ilme_ano; clear sst_tmp; clear sst_DJF; clear sst_MAM; clear sst_JJA; clear sst_SON;
+    end
+    clear sst_iens;
+end
+
+save sst_pattern_vol_yes_relative.mat sst_DJF_iens sst_MAM_iens sst_JJA_iens sst_SON_iens;
+
+%%
+% select vol_year
+load Nino_ano_vol_yes.mat;
+load sst_pattern_vol_yes_relative.mat;
+yr = 850:1849; yr = yr';
+tropical = [409 435 960 966];
+northern = [327 364 751 792 913 986];
+southern = [426 492 603];
+
+icase = 1;
+if icase ==1;  vol_yr = tropical; end
+if icase ==2; vol_yr = northern; end
+if icase ==3; vol_yr = southern; end
+
+sst_pattern_DJF_volyr = sst_DJF_iens(:,:,:,vol_yr,:);
+sst_pattern_MAM_volyr = sst_MAM_iens(:,:,:,vol_yr,:);
+sst_pattern_JJA_volyr = sst_JJA_iens(:,:,:,vol_yr,:);
+sst_pattern_SON_volyr = sst_SON_iens(:,:,:,vol_yr,:);
+
+sst_pattern_DJF_volyr_re = reshape(sst_pattern_DJF_volyr,96,144,9,size(sst_pattern_DJF_volyr,4).*size(sst_pattern_DJF_volyr,5));
+sst_pattern_MAM_volyr_re = reshape(sst_pattern_MAM_volyr,96,144,10,size(sst_pattern_MAM_volyr,4).*size(sst_pattern_MAM_volyr,5));
+sst_pattern_JJA_volyr_re = reshape(sst_pattern_JJA_volyr,96,144,10,size(sst_pattern_JJA_volyr,4).*size(sst_pattern_JJA_volyr,5));
+sst_pattern_SON_volyr_re = reshape(sst_pattern_JJA_volyr,96,144,10,size(sst_pattern_JJA_volyr,4).*size(sst_pattern_JJA_volyr,5));
+
+
+Nino_volyr = Nino_ano(:,vol_yr,:);
+Nino_volyr_re = reshape(Nino_volyr, size(Nino_volyr,1), size(Nino_volyr,2).*size(Nino_volyr,3));
+
+
+for ilat = 1:size(sst_pattern_DJF_volyr_re,1)
+    for ilon = 1:size(sst_pattern_DJF_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_DJF_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(6,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_DJF0_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_DJF0_vol_yes(ilat, ilon) = stats(1,3);
+        end
+        clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+
+save regress_nino3.4_DJFSST_yr0_vol_yes.mat  r_Nino_DJF0_vol_yes p_Nino_DJF0_vol_yes;
+
+
+
+for ilat = 1:size(sst_pattern_DJF_volyr_re,1)
+    for ilon = 1:size(sst_pattern_DJF_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_DJF_volyr_re(ilat,ilon,:,:));
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3      
+            Y = squeeze(tmp_series(7,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_DJF1_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_DJF1_vol_yes(ilat, ilon) = stats(1,3);
+        end
+        clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_DJFSST_yr1_vol_yes.mat  r_Nino_DJF1_vol_yes p_Nino_DJF1_vol_yes;
+
+for ilat = 1:size(sst_pattern_DJF_volyr_re,1)
+    for ilon = 1:size(sst_pattern_DJF_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_DJF_volyr_re(ilat,ilon,:,:));
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3      
+            Y = squeeze(tmp_series(8,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_DJF2_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_DJF2_vol_yes(ilat, ilon) = stats(1,3);
+        end
+        clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_DJFSST_yr2_vol_yes.mat   r_Nino_DJF2_vol_yes p_Nino_DJF2_vol_yes;
+
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_MAM_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(7,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_MAM1_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_MAM2_vol_yes(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+
+    end
+end
+save regress_nino3.4_MAMSST_yr1_vol_yes.mat  r_Nino_MAM1_vol_yes p_Nino_MAM1_vol_yes;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_MAM_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(8,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_MAM2_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_MAM2_vol_yes(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_MAMSST_yr2_vol_yes.mat  r_Nino_MAM2_vol_yes p_Nino_MAM2_vol_yes;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_MAM_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(9,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_MAM3_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_MAM3_vol_yes(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_MAMSST_yr3_vol_yes.mat r_Nino_MAM3_vol_yes p_Nino_MAM3_vol_yes;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_JJA_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(7,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_JJA1_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_JJA1_vol_yes(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_JJASST_yr1_vol_yes.mat  r_Nino_JJA1_vol_yes p_Nino_JJA1_vol_yes;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_JJA_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(8,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_JJA2_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_JJA2_vol_yes(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_JJASST_yr2_vol_yes.mat  r_Nino_JJA2_vol_yes p_Nino_JJA2_vol_yes;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_JJA_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(9,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_JJA3_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_JJA3_vol_yes(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_JJASST_yr3_vol_yes.mat  r_Nino_JJA3_vol_yes p_Nino_JJA3_vol_yes;
+
+
+% SON
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_SON_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(7,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_SON1_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_SON1_vol_yes(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_SONSST_yr1_vol_yes.mat  r_Nino_SON1_vol_yes  p_Nino_SON1_vol_yes;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_SON_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(8,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_SON2_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_SON2_vol_yes(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_SONSST_yr2_vol_yes.mat  r_Nino_SON2_vol_yes  p_Nino_SON2_vol_yes;
+
+for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
+    for ilon = 1:size(sst_pattern_MAM_volyr_re,2)
+
+        tmp_series = squeeze(sst_pattern_SON_volyr_re(ilat,ilon,:,:));
+
+        index = find(isnan(tmp_series));
+        if size(index,1) > 0
+            tmp_series(index) = [];
+        end
+
+        if length(tmp_series) > 3
+         
+            Y = squeeze(tmp_series(9,:))';
+            X = squeeze(Nino_volyr_re(6,:))';
+
+            x1=[ones(size(X,1),1), X];
+            [c,~,~,~,stats]  = regress(Y,x1);
+            r_Nino_SON3_vol_yes(ilat, ilon) = c(2,1);
+            p_Nino_SON3_vol_yes(ilat, ilon) = stats(1,3);
+        end
+                clear tmp_series; clear index; clear Y; clear X; clear x1; clear c; clear stats; 
+    end
+end
+save regress_nino3.4_SONSST_yr3_vol_yes.mat r_Nino_SON3_vol_yes  p_Nino_SON3_vol_yes;
+%% plot
+pattern = r_Nino_DJF_vol_yes - r_Nino_DJF_vol_no;
+pattern(:,:,2) = r_Nino_MAM_vol_yes - r_Nino_MAM_vol_no;
+pattern(:,:,3) = r_Nino_JJA_vol_yes - r_Nino_JJA_vol_no;
+pattern(:,:,4) =  r_Nino_SON_vol_yes - r_Nino_SON_vol_no;
+
+
+lon_af = -180+2.5/2 : 2.5: 180-2.5/2;
+lat_af = 90-1.875/2 : -1.875 : -90+1.875/2;
+
+page_width = 18;
+page_height = 18;
+figure('Units','centimeters',...
+    'position',[0 0 page_width page_height],...
+    'PaperPosition',[0 0 page_width page_height],...
+    'color',[1 1 1]);
+
+% set position of three subplots
+nrow=4;
+ncol=1;
+width = 0.275;
+height = width./2.769;
+epsw = 0.075;
+epsh = 0.085;
+xstart=0.075;
+ystart=0.05;
+pos = zeros(nrow*ncol,4);
+for r=1:nrow
+    for c=1:ncol
+        pos((r-1)*ncol+c,1)=xstart + (c-1)*(width+epsw);
+        pos((r-1)*ncol+c,2)=1-(ystart+r*height+(r-1)*epsh);
+        pos((r-1)*ncol+c,3)=width;
+        pos((r-1)*ncol+c,4)=height;
+    end
+end
+fsize=12;
+
+% labels
+Label = {'Tropical Eruption'};
+Label_abc = {'h','i','j','k'};
+Label_season = {'DJF', 'MAM','JJA','SON'};
+
+load coastlines;
+
+iiid = find(coastlon<0);
+coastlon_new = coastlon;
+coastlon_new(iiid) = coastlon(iiid)+360;
+
+coastlon_new(coastlon_new>359.5) = nan;
+coastlon_new(coastlon_new<-359.5) = nan;
+coastlat(coastlat>89.5) = nan;
+coastlat(coastlat<-89.5) = nan;
+coastlat(coastlat>-0.025&coastlat<0.025) = nan;
+
+for inum = 1:nrow * ncol
+
+    ax= axes('Position',pos(inum,:),'Color','none');
+    set(ax, 'ylim' , [-65, 65],'YTick',-45:45:45,'TickDir','out', 'TickLength',[0.005/0.3, 0],...
+        'YTickLabel',{'45S','EQ' ,'45N'},'FontName','Helvetica','FontSize',12);
+
+    set(ax, 'xlim' , [-180 180], 'XTick',-180:90:180,'XTickLabel',{'180W','90W','0','90E', '180E'},'FontName','Helvetica','FontSize',12,'XTickLabelRotation',0);
+    % text(0:90:360, [-45 -45 -45 -45 -45],{'0\circ','90\circE','180\circ','90\circW', '0\circ'},...
+    %      'FontName','Helvetica','horizontalalignment','center','FontSize',9)
+
+     hold on %!!!!!!!!
+     imagesc( lon_af, lat_af, pattern(:, :, inum),'alphadata',~isnan( pattern(:, :, inum) ) );
+    %
+    % 等值线
+    hold on;
+    % [c,h] = contourf(lon_af, lat_af,  pattern(:, :, inum), 'LevelList', [-100, -10 : 0.1 : 10, 100]);
+    % h.LineColor = 'none';
+    load BlueDarkRed18;
+    colormap (BlueDarkRed18);
+    hold on;
+
+    clim([-0.45 0.45]);
+
+    % % plot(coastlon, coastlat,'k');
+    geoshow('/Users/yingyingfeng/Downloads/D/FengYingying/FengYingyingData/MapData/GLOBALSHP/ContinentsPoly.shp','linewidth',0.5,'Facecolor',[0.9 0.9 0.9]);
+
+
+    box on;
+    grid off;
+    set(ax,'layer','top');
+
+    % if inum==1 
+    % text(0, 110, 'Southern Eruption',  'FontName','Helvetica','horizontalalignment','center','FontSize',14);
+    % end
+    hold on;
+    text(-180, 85, Label_abc{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
+    text(180, 85, Label_season{inum},  'FontName','Helvetica','horizontalalignment','right','FontSize',12);
+
+    %
+    % ax=gca;
+    % axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+
+end
+
+cb1=colorbar(ax,'location','southoutside','position',[0.075 0.15 0.5 0.015]);
+set(cb1,'ticks', -0.4:0.2:0.4, 'ticklength', 0.005/0.3 ,'fontsize',12);
+
+cb1ax = axes('position', cb1.Position, 'visible', 'off');
+text(cb1ax, 0.5, -4, 'Change in response of SSTA to Nino3.4','Fontname','Helvetica','fontsize',14,'horizontalalignment','center' );
+% % 
+% img =gcf;
+% print(img, '-dtiff', '-r600', 'Northern_response_of_SSTA_to_Nino3.4_10yr_pre_cal_ano_colorbar.tif');
