@@ -1,0 +1,546 @@
+%%
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/sst_idx_850-2005_ILME_FULL_15ens.mat')
+Nino_series = squeeze(sst_idx(:,1,:));
+TNA_series = squeeze(sst_idx(:,2,:));
+IOD_series = squeeze(sst_idx(:,6,:));
+IOB_series = squeeze(sst_idx(:,3,:));
+yr = 850:2005; yr = yr';
+sst_idx_real = sst_idx;
+sst_idx_real(:,1:5,:) = sst_idx_real(:,1:5,:) - 273.15; 
+sst_idx_real(:,7:11,:) = sst_idx_real(:,7:11,:) - 273.15; 
+data_avg = nan(1156,3,15);
+data_std = nan(1156,3,15);
+data_series = nan(1156,3,15,30);
+
+for iens = 1:15
+    sst_idx = squeeze(sst_idx_real(:,:,iens));
+    for iwd = 16:1:985
+        clear tmp; clear tmp_re; clear tmp_re_rownmean; clear tmp_re_anomaly;
+        sst_idx_iwd = sst_idx((iwd-16)*12+1:(iwd+15)*12,:);
+
+        sst_idx_iwd_re = reshape(sst_idx_iwd,12,size(sst_idx_iwd,1)./12,11);
+        sst_idx_wd_season_mean = nanmean(sst_idx_iwd_re,2);
+        sst_idx_wd_season_mean_rep = repmat(sst_idx_wd_season_mean ,1,size(sst_idx_iwd,1)./12,1);
+        sst_idx_wd_ano = sst_idx_iwd_re - sst_idx_wd_season_mean_rep;
+        sst_idx_run = sst_idx_wd_ano;
+
+        Nino_mon_re = sst_idx_wd_ano(:,:,1);
+        Nino_series = squeeze(nanmean([Nino_mon_re(12,1:end-1);Nino_mon_re(1:2,2:end)],1))';
+        
+        TNA_mon_re = sst_idx_wd_ano(:,:,2);
+        TNA_series = nanmean(TNA_mon_re(3:5,:),1)';
+     
+        ATL3_mon_re = sst_idx_wd_ano(:,:,9);
+        ATL3_series = squeeze(nanmean([ATL3_mon_re(12,1:end-1);ATL3_mon_re(1:2,2:end)],1))';
+
+        IOB_mon_re = sst_idx_wd_ano(:,:,3);
+        IOB_series = nanmean(IOB_mon_re(3:5,:),1)';
+
+        WTIO_mon_re = sst_idx_wd_ano(:,:,4);
+        WTIO_series = nanmean(WTIO_mon_re(9:11,:),1)';
+       
+        ETIO_mon_re = sst_idx_wd_ano(:,:,5);
+        ETIO_series = nanmean(ETIO_mon_re(9:11,:),1)';
+
+        IOD_series = WTIO_series - ETIO_series;
+
+        X = detrend(Nino_series);
+        Y = detrend(ATL3_series);
+
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        ATL3_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        ATL3_ano_no_nino = Y - ATL3_ano_relate_nino; %第2-50yr
+
+        X = Nino_series;
+        Y = TNA_series(2:end,1); %%%%%%%这里改为：不detrend!
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        TNA_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        TNA_ano_no_nino = Y - TNA_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        X = Nino_series;
+        Y = IOB_series(2:end,1);
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        IOB_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        IOB_ano_no_nino = Y - IOB_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        X = detrend(Nino_series);
+        Y = detrend(WTIO_series(1:end-1,1));
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        WTIO_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        WTIO_ano_no_nino = Y - WTIO_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        X = detrend(Nino_series);
+        Y = detrend(ETIO_series(1:end-1,1));
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        ETIO_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        ETIO_ano_no_nino = Y - ETIO_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        X = detrend(Nino_series);
+        Y = detrend(IOD_series(1:end-1,1));
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        IOD_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        IOD_ano_no_nino = Y - IOD_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        data_std(iwd,1,iens) = nanstd(Nino_series);
+        data_std(iwd,2,iens) = nanstd(TNA_ano_no_nino);
+        data_std(iwd,3,iens) = nanstd(IOB_ano_no_nino);
+
+        data_series(iwd,1,iens,1:30) = Nino_series;
+        data_series(iwd,2,iens,1:30) = TNA_ano_no_nino;
+        data_series(iwd,3,iens,1:30) = IOB_ano_no_nino;
+
+    end
+end
+save sst_idx_for_cal_Hi_lw_variance_of_Nino_TNA_IOB_new_version.mat data_std data_series;
+%%
+data_std_point = nan(1156,3,15);
+series_hi_std = nan(1156,3,15,31);
+series_lw_std = nan(1156,3,15,31);
+
+for iens = 1:15
+    for i = 16:31:985
+        data_std_point(i,:,iens) = data_std(i,:,iens);
+    end
+end
+
+for iens = 1:15
+    for ivar = 1:3
+        clear lw_std; clear hi_std;
+        clear avg; clear std;
+        clear data_std_ivar;
+        data_std_ivar = data_std_point(:,ivar,iens);
+        avg = nanmean(data_std_ivar);
+        std = nanstd(data_std_ivar);
+        hi_std = find(data_std_ivar>avg+0.5*std);
+        lw_std = find(data_std_ivar<avg-0.5*std);
+        Hi_std_mme(1:length(hi_std),ivar,iens) = hi_std;
+        Lw_std_mme(1:length(lw_std),ivar,iens) = lw_std;
+        clear hi_std; clear lw_std;
+    end
+end
+
+Hi_std_mme(Hi_std_mme==0) = nan;
+Lw_std_mme(Lw_std_mme==0) = nan;
+
+save Hi_lw_variance_of_Nino_TNA_IOB_new_version.mat Hi_std_mme Lw_std_mme;
+%% 论文版 只有2年的Nino3.4 regression pattern on sst
+
+load sst_idx_850-2005_ILME_FULL_15ens.mat;
+Nino_series = squeeze(sst_idx(:,1,:));
+TNA_series = squeeze(sst_idx(:,2,:));
+IOD_series = squeeze(sst_idx(:,6,:));
+IOB_series = squeeze(sst_idx(:,3,:));
+yr = 850:2005; yr = yr';
+
+load sst_ilme_ano.mat sst_ilme_ano;
+sst_ilme_ano_re = reshape(sst_ilme_ano,[96 144 12000 15]); clear sst_ilme_ano;
+
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+mask_sst_tmp = squeeze(hadisst_per(:,:,end)); clear hadisst_per;
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+mask_sst_rep = repmat(mask_sst,1,1,12000,15);
+
+sst_ilme_ano_re(isnan(mask_sst_rep)) = nan; clear mask_sst_rep;
+
+s = [1156,15];
+F12 = nan(96,144,s(1),s(2));
+F21 = nan(96,144,s(1),s(2));
+sig12 = nan(96,144,s(1),s(2));
+sig21 = nan(96,144,s(1),s(2));
+order_result = nan(96,144,s(1),s(2));
+
+%%
+for iens = 8:15
+    for iwd = 16:31:985
+        clear Nino_zscore; clear Nino_anomaly; clear Nino_detrend;
+        clear TNA_zscore; clear TNA_anomaly; clear TNA_detrend;
+        clear IOD_zscore; clear IOD_anomaly; clear IOD_detrend;
+
+        clear tmp; clear tmp_re; clear tmp_re_rownmean; clear tmp_re_anomaly;
+        pd = (iwd-16)*12+1:(iwd+15)*12;
+
+        tmp_pattern = squeeze(sst_ilme_ano_re(:,:,pd,iens));
+
+        tmp = Nino_series(pd ,iens);
+        tmp_re = reshape(tmp,12,size(pd,2)/12);
+        tmp_re_rownmean = nanmean(tmp_re,2);
+        tmp_re_anomaly = tmp_re - tmp_re_rownmean;
+        Nino_anomaly = reshape(tmp_re_anomaly,size(pd,2),1);
+        Nino_detrend = detrend(Nino_anomaly);
+        Nino_zscore = zscore(Nino_detrend);
+        clear tmp; clear tmp_re; clear tmp_re_rownmean; clear tmp_re_anomaly;
+
+        for ilat = 16:81
+            for ilon = 1:144
+                ntrials   = 1;
+                nobs      = size(pd,2);
+
+                regmode   = 'OLS';  % VAR model estimation regression mode ('OLS', 'LWR' or empty for default)
+                icregmode = 'LWR';  % information criteria regression mode ('OLS', 'LWR' or empty for default)
+
+                momax     = 12;     % maximum model order for model order estimation
+
+                acmaxlags = 1000;   % maximum autocovariance lags (empty for automatic calculation)
+
+                tstat     = '';     % statistical test for MVGC:  'F' for Granger's F-test (default) or 'chi2' for Geweke's chi2 test
+                alpha     = 0.05;   % significance level for significance test
+                mhtc      = 'FDR';  % multiple hypothesis test correction (see routine 'significance')
+                nvars     = 2;
+
+                disp(['Processing pixel ' ':'  ' ilat' num2str(ilat)   ' ...']);
+                disp(['Processing pixel ' ':'  ' ilon' num2str(ilon)   ' ...']);
+                pattern_pixel = squeeze(tmp_pattern(ilat,ilon,:));
+
+                X(1,:) = squeeze(Nino_zscore)';
+                X(2,:) = zscore(pattern_pixel)';
+
+                index = find(isnan(X(2,:)));
+
+                if size(index,1) > 0
+                    pattern_pixel(index) = [];
+                end
+
+                if length(pattern_pixel) > 3
+                    [AIC,BIC,moAIC,moBIC] = tsdata_to_infocrit(X,momax,icregmode);
+                    morder = moAIC;
+                    [A,SIG] = tsdata_to_var(X,morder,regmode);
+
+                    if isbad(A)
+                        fprintf(2,' *** skipping - VAR estimation failed\n');
+                        continue
+                    end
+
+                    [G,info] = var_to_autocov(A,SIG);
+                    if info.warnings ~=0 && info.error ~=0
+                        fprintf(2,' *** skipping - var_to_autocov\n');
+                        continue
+                    end
+
+                    FF = autocov_to_pwcgc(G);
+                    tmp = ~isbad(FF,false);
+                    if tmp ==0
+                        fprintf(2,' *** skipping - warning autocov_to_pwcgc\n');
+                        continue
+                    end
+
+                    F12(ilat,ilon,iwd,iens) = FF(1,2); % estimated GC 2 -> 1  Nino series to SST
+                    F21(ilat,ilon, iwd,iens) = FF(2,1); % estimated GC 1 -> 2  SST to Nino series
+
+                    pval = mvgc_pval(FF,morder,nobs,ntrials,1,1,nvars-2,tstat);
+                    sig  = significance(pval,alpha,mhtc);
+                    order_result(ilat,ilon,iwd,iens) = moAIC;
+
+                    sig12(ilat,ilon,iwd,iens) = sig(1,2);
+                    sig21(ilat,ilon,iwd,iens) = sig(2,1);
+                end
+            end
+        end
+        disp(['Processing window ' ':'  ' iwindow' num2str(iwd)   ' ...']);
+        disp(['Processing ensemble ' ':'  ' iensemble' num2str(iens)   ' ...']);
+    end
+end
+
+save -v7.3 Granger_31yr_Nino3.4_pattern_iens8_15.mat F12 F21 sig12 sig21 order_result;
+
+%%  高减低TNA/IOB年份
+load('Granger_31yr_Nino3.4_pattern_iens1_7.mat');
+G = F21;
+load('Granger_31yr_Nino3.4_pattern_iens8_15.mat')
+G(:,:,:,8:15) = F21(:,:,:,8:15);
+
+load Hi_lw_variance_of_Nino_TNA_IOB_new_version.mat;
+hi_std_wd_TNA = squeeze(Hi_std_mme(:,1,:));
+lw_std_wd_TNA = squeeze(Lw_std_mme(:,1,:));
+
+pattern_hi = nan(96,144,50,15);
+pattern_lw = nan(96,144,50,15);
+
+for iens = 1:15
+    tmp = hi_std_wd_TNA(:,iens);
+    len = length(find(~isnan(tmp)));
+    pattern_hi(:,:,1:len,iens) = G(:,:,tmp(1:len),iens);
+    clear len; clear tmp;
+
+    tmp_lw = lw_std_wd_TNA(:,iens);
+    len_lw = length(find(~isnan(tmp_lw)));
+    pattern_lw(:,:,1:len_lw,iens) = G(:,:,tmp_lw(1:len_lw),iens);
+    clear len_lw; clear tmp_lw;
+end
+
+%% plot
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+mask_sst_tmp = squeeze(hadisst_per(:,:,end)); clear hadisst_per;
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+
+mask_sst_rep = repmat(mask_sst,1,1,50,15);
+pattern(isnan(mask_sst_rep)) = nan; 
+
+pattern_lw(isnan(mask_sst_rep)) = nan;
+
+lon_af = 0+2.5/2 : 2.5 : 360-2.5/2; lon_af = lon_af';
+lat_af = 90-1.875/2 : -1.875 : -90+1.875/2; lat_af = lat_af';
+
+diff_sst = squeeze(nanmean(pattern_hi,[3 4])) - squeeze(nanmean(pattern_lw,[3 4]));
+
+[~, pv_ts] =  ttest2(reshape(pattern_hi,96,144,50*15),reshape(pattern_lw,96,144,50*15), 'dim', 3 );
+
+diff_sst_final = nan(96,144); diff_sst_final (:,1:72) = diff_sst(:,73:144); diff_sst_final(:,73:144) = diff_sst(:,1:72); 
+
+pv_ts_final = nan(96,144); pv_ts_final (:,1:72) = pv_ts(:,73:144); pv_ts_final(:,73:144) = pv_ts(:,1:72); 
+
+diff_sst_final(pv_ts_final>0.05) = nan;
+
+page_width = 20;
+page_height = 20;
+figure('Units','centimeters',...
+       'position',[0 0 page_width page_height],...
+       'PaperPosition',[0 0 page_width page_height],...
+       'color',[1 1 1]);
+   
+% set position of three subplots
+nrow=3;
+ncol=1;
+width = 0.375;
+height = width./3;
+epsw = 0.1;
+epsh = 0.09;
+xstart=0.1;
+ystart=0.05;
+pos = zeros(nrow*ncol,4);
+for r=1:nrow
+    for c=1:ncol
+        pos((r-1)*ncol+c,1)=xstart + (c-1)*(width+epsw);
+        pos((r-1)*ncol+c,2)=1-(ystart+r*height+(r-1)*epsh);
+        pos((r-1)*ncol+c,3)=width;
+        pos((r-1)*ncol+c,4)=height;
+    end
+end
+Label = {'High minus Low Nino3.4 Variability','High minus Low TNA Variability','High minus Low IOB Variability'};
+Label_abc = {'a', 'b', 'c'};
+
+load coastlines;
+
+iiid = find(coastlon<0);
+coastlon_new = coastlon;
+coastlon_new(iiid) = coastlon(iiid)+360;
+
+coastlon_new(coastlon_new>359) = nan;
+coastlon_new(coastlon_new<-359) = nan;
+coastlat(coastlat>89) = nan;
+coastlat(coastlat<-89) = nan;
+coastlat(coastlat>-0.05&coastlat<0.05) = nan;
+
+[x,y] = meshgrid(0+7.5:15:360-7.5,90-7.5:-15:-90+7.5);
+
+inum = 1
+
+ax= axes('Position',pos(inum,:),'Color','none');
+set(ax, 'ylim' , [-60, 60],'YTick', -60:60:60,'TickDir','out', 'TickLength',[0.005/0.3, 0],...
+    'YTickLabel',{'60S','EQ' ,'60N'},'FontName','Helvetica','FontSize',11);
+
+set(ax, 'xlim' , [0.25 359.75], 'XTick', 0:90:360,'XTickLabel',[]);
+text(0:90:360, [-90 -90 -90 -90 -90],{'0','90E','180','90W', '0'},...
+    'FontName','Helvetica','horizontalalignment','center','FontSize',11)
+
+hold on %!!!!!!!!
+
+% 等值线
+[c,h] = contourf(lon_af, lat_af, diff_sst_final(:, :, inum), 'LevelList', [-100, -1 : 0.0001 : 1, 100]);
+h.LineColor = 'none';
+load BlueDarkRed18.mat
+colormap (BlueDarkRed18);
+
+caxis([-0.045 0.045]);
+hold on;
+plot(coastlon_new, coastlat,'k');
+
+box off;
+grid off;
+set(ax,'layer','top');
+%
+    text(0, 80, Label_abc{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
+    text(20, 77.5, Label{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',12);
+%
+box off;
+ax=gca;
+axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+%%
+%
+load Hi_lw_variance_of_Nino_TNA_IOB_new_version.mat;
+hi_std_wd_TNA = squeeze(Hi_std_mme(:,2,:));
+lw_std_wd_TNA = squeeze(Lw_std_mme(:,2,:));
+
+pattern_hi = nan(96,144,50,15);
+pattern_lw = nan(96,144,50,15);
+
+for iens = 1:15
+    tmp = hi_std_wd_TNA(:,iens);
+    len = length(find(~isnan(tmp)));
+    pattern_hi(:,:,1:len,iens) = G(:,:,tmp(1:len),iens);
+    clear len; clear tmp;
+
+    tmp_lw = lw_std_wd_TNA(:,iens);
+    len_lw = length(find(~isnan(tmp_lw)));
+    pattern_lw(:,:,1:len_lw,iens) = G(:,:,tmp_lw(1:len_lw),iens);
+    clear len_lw; clear tmp_lw;
+end
+
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+mask_sst_tmp = squeeze(hadisst_per(:,:,end)); clear hadisst_per;
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+
+mask_sst_rep = repmat(mask_sst,1,1,50,15);
+pattern(isnan(mask_sst_rep)) = nan; 
+
+pattern_lw(isnan(mask_sst_rep)) = nan;
+
+lon_af = 0+2.5/2 : 2.5 : 360-2.5/2; lon_af = lon_af';
+lat_af = 90-1.875/2 : -1.875 : -90+1.875/2; lat_af = lat_af';
+
+diff_sst = squeeze(nanmean(pattern_hi,[3 4])) - squeeze(nanmean(pattern_lw,[3 4]));
+[~, pv_ts] =  ttest2(reshape(pattern_hi,96,144,50*15),reshape(pattern_lw,96,144,50*15), 'dim', 3 );
+diff_sst_final = nan(96,144); diff_sst_final (:,1:72) = diff_sst(:,73:144); diff_sst_final(:,73:144) = diff_sst(:,1:72); 
+pv_ts_final = nan(96,144); pv_ts_final (:,1:72) = pv_ts(:,73:144); pv_ts_final(:,73:144) = pv_ts(:,1:72); 
+diff_sst_final(pv_ts_final>0.05) = nan;
+
+
+inum = 2
+
+ax= axes('Position',pos(inum,:),'Color','none');
+set(ax, 'ylim' , [-60, 60],'YTick', -60:60:60,'TickDir','out', 'TickLength',[0.005/0.3, 0],...
+    'YTickLabel',{'60S','EQ' ,'60N'},'FontName','Helvetica','FontSize',11);
+
+set(ax, 'xlim' , [0.25 359.75], 'XTick', 0:90:360,'XTickLabel',[]);
+text(0:90:360, [-90 -90 -90 -90 -90],{'0','90E','180','90W', '0'},...
+    'FontName','Helvetica','horizontalalignment','center','FontSize',11)
+
+hold on %!!!!!!!!
+[c,h] = contourf(lon_af, lat_af, diff_sst_final, 'LevelList', [-100, -1 : 0.0001 : 1, 100]);
+h.LineColor = 'none';
+load BlueDarkRed18.mat
+colormap (BlueDarkRed18);
+
+
+caxis([-0.045 0.045]);
+hold on;
+plot(coastlon_new, coastlat,'k');
+
+
+box off;
+grid off;
+set(ax,'layer','top');
+%
+text(0, 80, Label_abc{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
+text(20, 77.5, Label{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',12);
+%
+box off;
+ax=gca;
+axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+%
+%%
+load Hi_lw_variance_of_Nino_TNA_IOB_new_version.mat;
+hi_std_wd_TNA = squeeze(Hi_std_mme(:,3,:));
+lw_std_wd_TNA = squeeze(Lw_std_mme(:,3,:));
+
+pattern_hi = nan(96,144,50,15);
+pattern_lw = nan(96,144,50,15);
+
+for iens = 1:15
+    tmp = hi_std_wd_TNA(:,iens);
+    len = length(find(~isnan(tmp)));
+    pattern_hi(:,:,1:len,iens) = G(:,:,tmp(1:len),iens);
+    clear len; clear tmp;
+
+    tmp_lw = lw_std_wd_TNA(:,iens);
+    len_lw = length(find(~isnan(tmp_lw)));
+    pattern_lw(:,:,1:len_lw,iens) = G(:,:,tmp_lw(1:len_lw),iens);
+    clear len_lw; clear tmp_lw;
+end
+
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+mask_sst_tmp = squeeze(hadisst_per(:,:,end)); clear hadisst_per;
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+
+mask_sst_rep = repmat(mask_sst,1,1,50,15);
+pattern(isnan(mask_sst_rep)) = nan; 
+
+pattern_lw(isnan(mask_sst_rep)) = nan;
+
+lon_af = 0+2.5/2 : 2.5 : 360-2.5/2; lon_af = lon_af';
+lat_af = 90-1.875/2 : -1.875 : -90+1.875/2; lat_af = lat_af';
+
+diff_sst = squeeze(nanmean(pattern_hi,[3 4])) - squeeze(nanmean(pattern_lw,[3 4]));
+
+[~, pv_ts] =  ttest2(reshape(pattern_hi,96,144,50*15),reshape(pattern_lw,96,144,50*15), 'dim', 3 );
+
+diff_sst_final = nan(96,144); diff_sst_final (:,1:72) = diff_sst(:,73:144); diff_sst_final(:,73:144) = diff_sst(:,1:72); 
+
+pv_ts_final = nan(96,144); pv_ts_final (:,1:72) = pv_ts(:,73:144); pv_ts_final(:,73:144) = pv_ts(:,1:72); 
+diff_sst_final(pv_ts_final>0.05) = nan;
+
+inum = 3
+
+ax= axes('Position',pos(inum,:),'Color','none');
+set(ax, 'ylim' , [-60, 60],'YTick', -60:60:60,'TickDir','out', 'TickLength',[0.005/0.3, 0],...
+    'YTickLabel',{'60S','EQ' ,'60N'},'FontName','Helvetica','FontSize',11);
+
+set(ax, 'xlim' , [0.25 359.75], 'XTick', 0:90:360,'XTickLabel',[]);
+text(0:90:360, [-90 -90 -90 -90 -90],{'0','90E','180','90W', '0'},...
+    'FontName','Helvetica','horizontalalignment','center','FontSize',11)
+
+hold on %!!!!!!!!
+%
+
+[c,h] = contourf(lon_af, lat_af, diff_sst_final, 'LevelList', [-100, -1 : 0.0001 : 1, 100]);
+h.LineColor = 'none';
+load BlueDarkRed18.mat
+colormap (BlueDarkRed18);
+
+caxis([-0.045 0.045]);
+hold on;
+
+plot(coastlon_new, coastlat,'k');
+
+box off;
+grid off;
+set(ax,'layer','top');
+%
+text(0, 80, Label_abc{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
+text(20, 77.5, Label{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',12);
+%
+box off;
+ax=gca;
+axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+
+cb1=colorbar(ax,'location','southoutside','position',[0.1 0.3 0.375 0.015]);
+set(cb1,'ticks', -0.04:0.02:0.04, 'ticklength', 0.003/0.3 ,'fontsize',12);
+
+cb1ax = axes('position', cb1.Position, 'visible', 'off');
+text(cb1ax, 0.5, -3.5, 'Change in SSTA (\circ C)','Fontname','Helvetica','fontsize',12,'horizontalalignment','center' );
+
+%
+img =gcf;
+print(img, '-dtiff', '-r600', './LME_hi_lw_G_causality_regression_pattern_v1');
