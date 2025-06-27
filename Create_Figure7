@@ -1,0 +1,576 @@
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/sst_idx_850-2005_ILME_FULL_15ens_with_globalsst.mat')
+Nino_series = squeeze(sst_idx(:,1,:));
+TNA_series = squeeze(sst_idx(:,2,:));
+IOD_series = squeeze(sst_idx(:,6,:));
+IOB_series = squeeze(sst_idx(:,3,:));
+global_series = squeeze(sst_idx(:,12,:));
+
+data_avg = nan(1156,15);
+data_avg_remove = nan(1156,15);
+data_std = nan(1156,15);
+data_series = nan(1156,15,31);
+
+yr = 850:2005; yr = yr';
+sst_idx_real = sst_idx;
+sst_idx_real(:,1:5,:) = sst_idx_real(:,1:5,:) - 273.15; 
+sst_idx_real(:,7:12,:) = sst_idx_real(:,7:12,:) - 273.15; 
+
+sst_idx_iwd_re = reshape(sst_idx_real,12,1156,12,15);
+sst_idx_wd_season_mean = nanmean(sst_idx_iwd_re,2);
+sst_idx_wd_season_mean_rep = repmat(sst_idx_wd_season_mean ,1,1156,1,1);
+sst_idx_wd_ano = sst_idx_iwd_re - sst_idx_wd_season_mean_rep;
+
+for iens = 1:15
+    Nino_mon_re = squeeze(sst_idx_wd_ano(:,:,1,iens));
+    Nino_series = squeeze(nanmean([Nino_mon_re(12,1:end-1);Nino_mon_re(1:2,2:end)],1))';
+
+    TNA_mon_re = squeeze(sst_idx_wd_ano(:,:,2,iens));
+    TNA_series = nanmean(TNA_mon_re(3:5,:),1)';
+
+    IOB_mon_re = squeeze(sst_idx_wd_ano(:,:,3,iens));
+    IOB_series = nanmean(IOB_mon_re(3:5,:),1)';
+
+    global_mon_re = squeeze(sst_idx_wd_ano(:,:,12,iens));
+    global_series = nanmean(global_mon_re(1:12,:),1)';
+
+
+    X = detrend(Nino_series);
+    Y = detrend(TNA_series(2:end,1));
+    x1=[ones(size(X,1),1), X];
+    [c,~,~,~,stats]  = regress(Y,x1);
+    TNA_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+    TNA_ano_no_nino = Y - TNA_ano_relate_nino; %第2-50yr
+    clear X; clear x1; clear Y; clear c; clear stats;
+
+    X = detrend(Nino_series);
+    Y = detrend(IOB_series(2:end,1));
+    x1=[ones(size(X,1),1), X];
+    [c,~,~,~,stats]  = regress(Y,x1);
+    IOB_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+    IOB_ano_no_nino = Y - IOB_ano_relate_nino; %第2-50yr
+    clear X; clear x1; clear Y; clear c; clear stats;
+
+    Nino_series_fn(:,iens) = Nino_series;
+    IOB_series_fn(:,iens) = IOB_series;
+    TNA_series_fn(:,iens) = TNA_series;
+    global_series_fn(:,iens) = global_series;
+end
+
+for iens = 1:15
+    for iwd = 16:1:985
+        data_avg(iwd,iens) = nanmean(global_series_fn(iwd-15:iwd+15,iens),1);
+        data_std(iwd,iens) = nanstd(global_series_fn(iwd-15:iwd+15,iens),1);
+        data_series(iwd,iens,:) = global_series_fn(iwd-15:iwd+15,iens);
+
+    end
+end
+
+data_avg(data_avg==0) = nan; data_std(data_std==0) = nan; 
+
+data_std_point = nan(1156,15);
+data_avg_point = nan(1156,15);
+
+for iens = 1:15
+    for i = 16:31:985
+        data_std_point(i,iens) = data_std(i,iens);
+        data_avg_point(i,iens) = data_avg(i,iens);
+    end
+end
+data_avg_point(data_avg_point==0) =nan;
+
+Hi_avg_num = nan(1156,15);
+Lw_avg_num = nan(1156,15);
+
+for iens = 1:15    
+        clear lw_avg; clear hi_avg;
+        clear avg; clear std;
+        clear data_avg_ivar;
+        data_avg_ivar = data_avg_point(:,iens); data_avg_ivar(data_avg_ivar==0) = nan;
+        avg = nanmean(data_avg_ivar);
+        std = nanstd(data_avg_ivar);
+        hi_avg = find(data_avg_ivar>avg+0.5*std);
+        lw_avg = find(data_avg_ivar<avg-0.5*std);
+        series_hi_avg(1:length(hi_avg),iens,:) = data_series(hi_avg,iens,:);
+        series_lw_avg(1:length(lw_avg),iens,:) = data_series(lw_avg,iens,:);
+     
+        Hi_avg_num(1:length(hi_avg),iens) = hi_avg;
+        Lw_avg_num(1:length(lw_avg),iens) = lw_avg;
+end
+
+save Hi_lw_avg_global_sst_inum.mat Hi_avg_num  Lw_avg_num;
+%% sst
+load  Hi_lw_avg_global_sst_inum.mat;
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/uv_sst_LME_15ens/iLME_full_ts_mme.mat');
+sst_ilme = reshape(ts_per_fl(:,:,1:12000,:),96,144,12,12000/12,15); clear ts_per_fl;
+sst_ilme_avg = nanmean(sst_ilme,4);
+sst_ilme_avg_rep = repmat(sst_ilme_avg,1, 1, 1, 12000/12, 1);
+sst_ilme_ano = sst_ilme - sst_ilme_avg_rep;
+clear sst_ilme; clear sst_ilme_avg; clear sst_ilme_avg_rep; 
+
+sst_hi_avg_period = nan(96,144,12,20,15);
+sst_lw_avg_period = nan(96,144,12,20,15);
+
+for iens = 1:15
+    tmp = Hi_avg_num(:,iens);
+    for iwd = 1:length(find(~isnan(tmp)))
+        sst_hi_avg_period(:,:,:,iwd,iens) = squeeze(nanmean(sst_ilme_ano(:,:,:, Hi_avg_num(iwd,iens)-15:Hi_avg_num(iwd,iens)+15,iens),4));
+    end
+    clear tmp;
+end
+
+for iens = 1:15
+    tmp = Lw_avg_num(:,iens);
+    for iwd = 1:length(find(~isnan(tmp)))
+        sst_lw_avg_period(:,:,:,iwd,iens) = squeeze(nanmean(sst_ilme_ano(:,:,:, Lw_avg_num(iwd,iens)-15:Lw_avg_num(iwd,iens)+15,iens),4));
+    end
+    clear tmp;
+end
+
+save -v7.3 hi_low_global_avg_sst.mat sst_hi_avg_period sst_lw_avg_period;
+%% u
+load  Hi_lw_avg_global_sst_inum.mat;
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/uv_sst_LME_15ens/iLME_full_u_mme_850.mat')
+nens = 15;
+u_ilme = reshape(u_per_fl(:,:,1:12000,:),96,144,12,12000/12,nens); clear u_per_fl;
+u_ilme_avg = nanmean(u_ilme,4);
+u_ilme_avg_rep = repmat(u_ilme_avg,1, 1, 1, 12000/12, 1);
+u_ilme_ano = u_ilme - u_ilme_avg_rep;
+clear u_ilme; clear u_ilme_avg; clear u_ilme_avg_rep; 
+u_hi_avg_period = nan(96,144,12,20,15);
+u_lw_avg_period = nan(96,144,12,20,15);
+
+for iens = 1:15
+    tmp = Hi_avg_num(:,iens);
+    for iwd = 1:length(find(~isnan(tmp)))
+        u_hi_avg_period(:,:,:,iwd,iens) = squeeze(nanmean(u_ilme_ano(:,:,:, Hi_avg_num(iwd,iens)-15:Hi_avg_num(iwd,iens)+15,iens),4));
+    end
+    clear tmp;
+end
+
+for iens = 1:15
+    tmp = Lw_avg_num(:,iens);
+    for iwd = 1:length(find(~isnan(tmp)))
+        u_lw_avg_period(:,:,:,iwd,iens) = squeeze(nanmean(u_ilme_ano(:,:,:, Lw_avg_num(iwd,iens)-15:Lw_avg_num(iwd,iens)+15,iens),4));
+    end
+    clear tmp;
+end
+
+save -v7.3 hi_low_global_avg_u.mat u_hi_avg_period u_lw_avg_period;
+clear;
+
+%% v
+load  Hi_lw_avg_global_sst_inum.mat;
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/uv_sst_LME_15ens/iLME_full_v_mme_850.mat')
+nens = 15;
+v_ilme = reshape(v_per_fl(:,:,1:12000,:),96,144,12,12000/12,nens); clear v_per_fl;
+v_ilme_avg = nanmean(v_ilme,4);
+v_ilme_avg_rep = repmat(v_ilme_avg,1, 1, 1, 12000/12, 1);
+v_ilme_ano = v_ilme - v_ilme_avg_rep;
+clear v_ilme; clear v_ilme_avg; clear v_ilme_avg_rep; 
+v_hi_avg_period = nan(96,144,12,20,15);
+v_lw_avg_period = nan(96,144,12,20,15);
+
+for iens = 1:15
+    tmp = Hi_avg_num(:,iens);
+    for iwd = 1:length(find(~isnan(tmp)))
+        v_hi_avg_period(:,:,:,iwd,iens) = squeeze(nanmean(v_ilme_ano(:,:,:, Hi_avg_num(iwd,iens)-15:Hi_avg_num(iwd,iens)+15,iens),4));
+    end
+    clear tmp;
+end
+
+for iens = 1:15
+    tmp = Lw_avg_num(:,iens);
+    for iwd = 1:length(find(~isnan(tmp)))
+        v_lw_avg_period(:,:,:,iwd,iens) = squeeze(nanmean(v_ilme_ano(:,:,:, Lw_avg_num(iwd,iens)-15:Lw_avg_num(iwd,iens)+15,iens),4));
+    end
+    clear tmp;
+end
+
+save -v7.3 hi_low_global_avg_v.mat v_hi_avg_period v_lw_avg_period;
+clear;
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Hi_low_varaibility period's uvsst pattern%%%%%%%%%%%%%%%%%%%%%%%%%
+
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/sst_idx_850-2005_ILME_FULL_15ens.mat')
+Nino_series = squeeze(sst_idx(:,1,:));
+TNA_series = squeeze(sst_idx(:,2,:));
+IOD_series = squeeze(sst_idx(:,6,:));
+IOB_series = squeeze(sst_idx(:,3,:));
+yr = 850:2005; yr = yr';
+sst_idx_real = sst_idx;
+sst_idx_real(:,1:5,:) = sst_idx_real(:,1:5,:) - 273.15; 
+sst_idx_real(:,7:11,:) = sst_idx_real(:,7:11,:) - 273.15; 
+data_avg = nan(1156,3,15);
+data_std = nan(1156,3,15);
+data_series = nan(1156,3,15,30);
+
+for iens = 1:15
+    sst_idx = squeeze(sst_idx_real(:,:,iens));
+    for iwd = 16:1:985
+        clear tmp; clear tmp_re; clear tmp_re_rownmean; clear tmp_re_anomaly;
+        sst_idx_iwd = sst_idx((iwd-16)*12+1:(iwd+15)*12,:);
+
+        sst_idx_iwd_re = reshape(sst_idx_iwd,12,size(sst_idx_iwd,1)./12,11);
+        sst_idx_wd_season_mean = nanmean(sst_idx_iwd_re,2);
+        sst_idx_wd_season_mean_rep = repmat(sst_idx_wd_season_mean ,1,size(sst_idx_iwd,1)./12,1);
+        sst_idx_wd_ano = sst_idx_iwd_re - sst_idx_wd_season_mean_rep;
+        sst_idx_run = sst_idx_wd_ano;
+
+        Nino_mon_re = sst_idx_wd_ano(:,:,1);
+        Nino_series = squeeze(nanmean([Nino_mon_re(12,1:end-1);Nino_mon_re(1:2,2:end)],1))';
+        
+        TNA_mon_re = sst_idx_wd_ano(:,:,2);
+        TNA_series = nanmean(TNA_mon_re(3:5,:),1)';
+     
+        ATL3_mon_re = sst_idx_wd_ano(:,:,9);
+        ATL3_series = squeeze(nanmean([ATL3_mon_re(12,1:end-1);ATL3_mon_re(1:2,2:end)],1))';
+
+        IOB_mon_re = sst_idx_wd_ano(:,:,3);
+        IOB_series = nanmean(IOB_mon_re(3:5,:),1)';
+
+        WTIO_mon_re = sst_idx_wd_ano(:,:,4);
+        WTIO_series = nanmean(WTIO_mon_re(9:11,:),1)';
+       
+        ETIO_mon_re = sst_idx_wd_ano(:,:,5);
+        ETIO_series = nanmean(ETIO_mon_re(9:11,:),1)';
+
+        IOD_series = WTIO_series - ETIO_series;
+
+        X = detrend(Nino_series);
+        Y = detrend(ATL3_series);
+
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        ATL3_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        ATL3_ano_no_nino = Y - ATL3_ano_relate_nino; %第2-50yr
+
+        X = detrend(Nino_series);
+        Y = detrend(TNA_series(2:end,1));
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        TNA_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        TNA_ano_no_nino = Y - TNA_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        X = detrend(Nino_series);
+        Y = detrend(IOB_series(2:end,1));
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        IOB_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        IOB_ano_no_nino = Y - IOB_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        X = detrend(Nino_series);
+        Y = detrend(WTIO_series(1:end-1,1));
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        WTIO_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        WTIO_ano_no_nino = Y - WTIO_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        X = detrend(Nino_series);
+        Y = detrend(ETIO_series(1:end-1,1));
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        ETIO_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        ETIO_ano_no_nino = Y - ETIO_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        X = detrend(Nino_series);
+        Y = detrend(IOD_series(1:end-1,1));
+        x1=[ones(size(X,1),1), X];
+        [c,~,~,~,stats]  = regress(Y,x1);
+        IOD_ano_relate_nino = c(1,1)+c(2,1).*X; %重建到第2-50year
+        IOD_ano_no_nino = Y - IOD_ano_relate_nino; %第2-50yr
+        clear X; clear x1; clear Y; clear c; clear stats;
+
+        data_std(iwd,1,iens) = nanstd(Nino_series);
+        data_std(iwd,2,iens) = nanstd(TNA_ano_no_nino);
+        data_std(iwd,3,iens) = nanstd(IOB_ano_no_nino);
+
+        data_series(iwd,1,iens,1:30) = Nino_series;
+        data_series(iwd,2,iens,1:30) = TNA_ano_no_nino;
+        data_series(iwd,3,iens,1:30) = IOB_ano_no_nino;
+
+    end
+end
+
+data_std_point = nan(1156,3,15);
+series_hi_std = nan(1156,3,15,31);
+series_lw_std = nan(1156,3,15,31);
+
+for iens = 1:15
+    for i = 16:31:985
+        data_std_point(i,:,iens) = data_std(i,:,iens);
+    end
+end
+
+for iens = 1:15
+    for ivar = 1:3
+        clear lw_std; clear hi_std;
+        clear avg; clear std;
+        clear data_std_ivar;
+        data_std_ivar = data_std_point(:,ivar,iens);
+        avg = nanmean(data_std_ivar);
+        std = nanstd(data_std_ivar);
+        hi_std = find(data_std_ivar>avg+0.5*std);
+        lw_std = find(data_std_ivar<avg-0.5*std);
+        Hi_std_mme(1:length(hi_std),ivar,iens) = hi_std;
+        Lw_std_mme(1:length(lw_std),ivar,iens) = lw_std;
+        clear hi_std; clear lw_std;
+    end
+end
+
+Hi_std_mme(Hi_std_mme==0) = nan;
+Lw_std_mme(Lw_std_mme==0) = nan;
+
+save Hi_lw_variance_of_Nino_TNA_IOB.mat Hi_std_mme Lw_std_mme;
+
+%%  sst
+load Hi_lw_variance_of_Nino_TNA_IOB.mat;
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/uv_sst_LME_15ens/iLME_full_ts_mme.mat');
+sst_ilme = reshape(ts_per_fl(:,:,1:12000,:),96,144,12,12000/12,15); clear ts_per_fl;
+sst_ilme_avg = nanmean(sst_ilme,4);
+sst_ilme_avg_rep = repmat(sst_ilme_avg,1, 1, 1, 12000/12, 1);
+sst_ilme_ano = sst_ilme - sst_ilme_avg_rep;
+clear sst_ilme; clear sst_ilme_avg; clear sst_ilme_avg_rep; 
+
+sst_hi_std_period = nan(96,144,12,20,15);
+sst_lw_std_period = nan(96,144,12,20,15);
+
+for ivar = 1:3
+    for iens = 1:15
+        tmp = squeeze(Hi_std_mme(:,ivar,iens));
+        for iwd = 1:length(find(~isnan(tmp)))
+            sst_hi_std_period(:,:,:,iwd,iens,ivar) = squeeze(nanmean(sst_ilme_ano(:,:,:, Hi_std_mme(:,ivar,iens)-15:Hi_std_mme(:,ivar,iens)+15,iens),4));
+        end
+        clear tmp;
+    end
+end
+
+for ivar = 1:3
+    for iens = 1:15
+        tmp = squeeze(Lw_std_mme(:,ivar,iens));
+        for iwd = 1:length(find(~isnan(tmp)))
+            sst_lw_std_period(:,:,:,iwd,iens,ivar) = squeeze(nanmean(sst_ilme_ano(:,:,:, Lw_std_mme(:,ivar,iens)-15:Lw_std_mme(:,ivar,iens)+15,iens),4));
+        end
+        clear tmp;
+    end
+end
+
+save -v7.3 hi_low_std_sst.mat sst_hi_std_period  sst_lw_std_period;
+clear;
+%% u
+load Hi_lw_variance_of_Nino_TNA_IOB.mat;
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/uv_sst_LME_15ens/iLME_full_u_mme_850.mat')
+nens = 15;
+u_ilme = reshape(u_per_fl(:,:,1:12000,:),96,144,12,12000/12,nens); clear u_per_fl;
+u_ilme_avg = nanmean(u_ilme,4);
+u_ilme_avg_rep = repmat(u_ilme_avg,1, 1, 1, 12000/12, 1);
+u_ilme_ano = u_ilme - u_ilme_avg_rep;
+clear u_ilme; clear u_ilme_avg; clear u_ilme_avg_rep; 
+u_hi_std_period = nan(96,144,12,20,15);
+u_lw_std_period = nan(96,144,12,20,15);
+%%
+for ivar = 1:3
+    for iens = 1:15
+        tmp = squeeze(Hi_std_mme(:,ivar,iens));
+        for iwd = 1:length(find(~isnan(tmp)))
+            u_hi_std_period(:,:,:,iwd,iens,ivar) = squeeze(nanmean(u_ilme_ano(:,:,:, Hi_std_mme(:,ivar,iens)-15:Hi_std_mme(:,ivar,iens)+15,iens),4));
+        end
+        clear tmp;
+    end
+end
+
+for ivar = 1:3
+    for iens = 1:15
+        tmp = squeeze(Lw_std_mme(:,ivar,iens));
+        for iwd = 1:length(find(~isnan(tmp)))
+            u_lw_std_period(:,:,:,iwd,iens,ivar) = squeeze(nanmean(u_ilme_ano(:,:,:, Lw_std_mme(:,ivar,iens)-15:Lw_std_mme(:,ivar,iens)+15,iens),4));
+        end
+        clear tmp;
+    end
+end
+
+save -v7.3 hi_low_std_u.mat u_hi_std_period u_lw_std_period;
+clear;
+%%
+% v
+load Hi_lw_variance_of_Nino_TNA_IOB.mat;
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/uv_sst_LME_15ens/iLME_full_v_mme_850.mat')
+nens = 15;
+v_ilme = reshape(v_per_fl(:,:,1:12000,:),96,144,12,12000/12,nens); clear v_per_fl;
+v_ilme_avg = nanmean(v_ilme,4);
+v_ilme_avg_rep = repmat(v_ilme_avg,1, 1, 1, 12000/12, 1);
+v_ilme_ano = v_ilme - v_ilme_avg_rep;
+clear v_ilme; clear v_ilme_avg; clear v_ilme_avg_rep; 
+v_hi_std_period = nan(96,144,12,20,15);
+v_lw_std_period = nan(96,144,12,20,15);
+
+for ivar = 1:3
+    for iens = 1:15
+        tmp = squeeze(Hi_std_mme(:,ivar,iens));
+        for iwd = 1:length(find(~isnan(tmp)))
+            v_hi_std_period(:,:,:,iwd,iens,ivar) = squeeze(nanmean(v_ilme_ano(:,:,:, Hi_std_mme(:,ivar,iens)-15:Hi_std_mme(:,ivar,iens)+15,iens),4));
+        end
+        clear tmp;
+    end
+end
+
+for ivar = 1:3
+    for iens = 1:15
+        tmp = squeeze(Lw_std_mme(:,ivar,iens));
+        for iwd = 1:length(find(~isnan(tmp)))
+            v_lw_std_period(:,:,:,iwd,iens,ivar) = squeeze(nanmean(v_ilme_ano(:,:,:, Lw_std_mme(:,ivar,iens)-15:Lw_std_mme(:,ivar,iens)+15,iens),4));
+        end
+        clear tmp;
+    end
+end
+
+save -v7.3 hi_low_std_v.mat v_hi_std_period v_lw_std_period;
+clear;
+
+%% plot
+
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+mask_sst_tmp = squeeze(hadisst_per(:,:,end)); clear hadisst_per;
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+mask_sst_rep = repmat(mask_sst,1,1,4);
+
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/hi_low_global_avg_sst.mat')
+pattern_sst(:,:,1) = squeeze(nanmean(sst_hi_avg_period(:,:,[1 2 12],:,:),[3 4 5])) - squeeze(nanmean(sst_lw_avg_period(:,:,[1 2 12],:,:),[3 4 5]));
+pattern_sst(:,:,2) = squeeze(nanmean(sst_hi_avg_period(:,:,[3 4 5],:,:),[3 4 5])) - squeeze(nanmean(sst_lw_avg_period(:,:,[3 4 5],:,:),[3 4 5]));
+pattern_sst(:,:,3) = squeeze(nanmean(sst_hi_avg_period(:,:,[6 7 8],:,:),[3 4 5])) - squeeze(nanmean(sst_lw_avg_period(:,:,[6 7 8],:,:),[3 4 5]));
+pattern_sst(:,:,4) = squeeze(nanmean(sst_hi_avg_period(:,:,[9 10 11],:,:),[3 4 5])) - squeeze(nanmean(sst_lw_avg_period(:,:,[9 10 11],:,:),[3 4 5]));
+
+[~, pv_sst(:,:,1)] = ttest2( squeeze(nanmean(sst_hi_avg_period(:,:,[1 2 12],:,:),[3 4]))  , squeeze(nanmean(sst_lw_avg_period(:,:,[1 2 12],:,:),[3 4])), 'dim', 3 );
+[~, pv_sst(:,:,2)] = ttest2( squeeze(nanmean(sst_hi_avg_period(:,:,[3 4 5],:,:),[3 4]))  , squeeze(nanmean(sst_lw_avg_period(:,:,[3 4 5],:,:),[3 4])), 'dim', 3 );
+[~, pv_sst(:,:,3)] = ttest2( squeeze(nanmean(sst_hi_avg_period(:,:,[6 7 8],:,:),[3 4]))  , squeeze(nanmean(sst_lw_avg_period(:,:,[6 7 8],:,:),[3 4])), 'dim', 3 );
+[~, pv_sst(:,:,4)] = ttest2( squeeze(nanmean(sst_hi_avg_period(:,:,[9 10 11],:,:),[3 4]))  , squeeze(nanmean(sst_lw_avg_period(:,:,[9 10 11],:,:),[3 4])), 'dim', 3 );
+pattern_sst(isnan(mask_sst_rep)) = nan;
+pv_sst(isnan(mask_sst_rep)) = nan;
+
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/hi_low_global_avg_u.mat')
+pattern_u(:,:,1) = squeeze(nanmean(u_hi_avg_period(:,:,[1 2 12],:,:),[3 4 5])) - squeeze(nanmean(u_lw_avg_period(:,:,[1 2 12],:,:),[3 4 5]));
+pattern_u(:,:,2) = squeeze(nanmean(u_hi_avg_period(:,:,[3 4 5],:,:),[3 4 5])) - squeeze(nanmean(u_lw_avg_period(:,:,[3 4 5],:,:),[3 4 5]));
+pattern_u(:,:,3) = squeeze(nanmean(u_hi_avg_period(:,:,[6 7 8],:,:),[3 4 5])) - squeeze(nanmean(u_lw_avg_period(:,:,[6 7 8],:,:),[3 4 5]));
+pattern_u(:,:,4) = squeeze(nanmean(u_hi_avg_period(:,:,[9 10 11],:,:),[3 4 5])) - squeeze(nanmean(u_lw_avg_period(:,:,[9 10 11],:,:),[3 4 5]));
+pattern_u(isnan(mask_sst_rep)) = nan;
+
+[~, pv_u(:,:,1)] = ttest2( squeeze(nanmean(u_hi_avg_period(:,:,[1 2 12],:,:),[3 4]))  , squeeze(nanmean(u_lw_avg_period(:,:,[1 2 12],:,:),[3 4])), 'dim', 3 );
+[~, pv_u(:,:,2)] = ttest2( squeeze(nanmean(u_hi_avg_period(:,:,[3 4 5],:,:),[3 4]))  , squeeze(nanmean(u_lw_avg_period(:,:,[3 4 5],:,:),[3 4])), 'dim', 3 );
+[~, pv_u(:,:,3)] = ttest2( squeeze(nanmean(u_hi_avg_period(:,:,[6 7 8],:,:),[3 4]))  , squeeze(nanmean(u_lw_avg_period(:,:,[6 7 8],:,:),[3 4])), 'dim', 3 );
+[~, pv_u(:,:,4)] = ttest2( squeeze(nanmean(u_hi_avg_period(:,:,[9 10 11],:,:),[3 4]))  , squeeze(nanmean(u_lw_avg_period(:,:,[9 10 11],:,:),[3 4])), 'dim', 3 );
+
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/hi_low_global_avg_v.mat')
+pattern_v(:,:,1) = squeeze(nanmean(v_hi_avg_period(:,:,[1 2 12],:,:),[3 4 5])) - squeeze(nanmean(v_lw_avg_period(:,:,[1 2 12],:,:),[3 4 5]));
+pattern_v(:,:,2) = squeeze(nanmean(v_hi_avg_period(:,:,[3 4 5],:,:),[3 4 5])) - squeeze(nanmean(v_lw_avg_period(:,:,[3 4 5],:,:),[3 4 5]));
+pattern_v(:,:,3) = squeeze(nanmean(v_hi_avg_period(:,:,[6 7 8],:,:),[3 4 5])) - squeeze(nanmean(v_lw_avg_period(:,:,[6 7 8],:,:),[3 4 5]));
+pattern_v(:,:,4) = squeeze(nanmean(v_hi_avg_period(:,:,[9 10 11],:,:),[3 4 5])) - squeeze(nanmean(v_lw_avg_period(:,:,[9 10 11],:,:),[3 4 5]));
+pattern_v(isnan(mask_sst_rep)) = nan;
+
+[~, pv_v(:,:,1)] = ttest2( squeeze(nanmean(v_hi_avg_period(:,:,[1 2 12],:,:),[3 4]))  , squeeze(nanmean(v_lw_avg_period(:,:,[1 2 12],:,:),[3 4])), 'dim', 3 );
+[~, pv_v(:,:,2)] = ttest2( squeeze(nanmean(v_hi_avg_period(:,:,[3 4 5],:,:),[3 4]))  , squeeze(nanmean(v_lw_avg_period(:,:,[3 4 5],:,:),[3 4])), 'dim', 3 );
+[~, pv_v(:,:,3)] = ttest2( squeeze(nanmean(v_hi_avg_period(:,:,[6 7 8],:,:),[3 4]))  , squeeze(nanmean(v_lw_avg_period(:,:,[6 7 8],:,:),[3 4])), 'dim', 3 );
+[~, pv_v(:,:,4)] = ttest2( squeeze(nanmean(v_hi_avg_period(:,:,[9 10 11],:,:),[3 4]))  , squeeze(nanmean(v_lw_avg_period(:,:,[9 10 11],:,:),[3 4])), 'dim', 3 );
+
+%% plot 
+pattern_sst_plot = nan(96,144,4); pattern_sst_plot(:,1:72,:) = pattern_sst(:,73:144,:); pattern_sst_plot(:,73:144,:) = pattern_sst(:,1:72,:);
+pattern_u_plot = nan(96,144,4); pattern_u_plot(:,1:72,:) = pattern_u(:,73:144,:); pattern_u_plot(:,73:144,:) = pattern_u(:,1:72,:);
+pattern_v_plot = nan(96,144,4); pattern_v_plot(:,1:72,:) = pattern_v(:,73:144,:); pattern_v_plot(:,73:144,:) = pattern_v(:,1:72,:);
+
+reso_lat = 1.875; reso_lon = 2.5;
+lat = 90-reso_lat/2 : -reso_lat : -90+reso_lat/2;
+lon = 0+reso_lon/2:reso_lon:360-reso_lon/2;
+
+page_width = 20;
+page_height = 20;
+figure('Units','centimeters',...
+       'position',[0 0 page_width page_height],...
+       'PaperPosition',[0 0 page_width page_height],...
+       'color',[1 1 1]);
+   
+% set position of three subplots
+nrow=2;
+ncol=1;
+width = 0.375;
+height = width./3;
+epsw = 0.1;
+epsh = 0.1;
+xstart=0.1;
+ystart=0.05;
+pos = zeros(nrow*ncol,4);
+for r=1:nrow
+    for c=1:ncol
+        pos((r-1)*ncol+c,1)=xstart + (c-1)*(width+epsw);
+        pos((r-1)*ncol+c,2)=1-(ystart+r*height+(r-1)*epsh);
+        pos((r-1)*ncol+c,3)=width;
+        pos((r-1)*ncol+c,4)=height;
+    end
+end
+% Label = {'Nino3.4','TNA','IOB'};
+Label_abc = {'a', 'b', 'c','d'};
+
+load coastlines;
+
+iiid = find(coastlon<0);
+coastlon_new = coastlon;
+coastlon_new(iiid) = coastlon(iiid)+360;
+
+coastlon_new(coastlon_new>359) = nan;
+coastlon_new(coastlon_new<-359) = nan;
+coastlat(coastlat>89.5) = nan;
+coastlat(coastlat<-89.5) = nan;
+coastlat(coastlat>-0.25&coastlat<0.25) = nan;
+
+for inum = 1
+    
+    ax= axes('Position',pos(inum,:),'Color','none');
+    set(ax, 'ylim' , [-60, 60],'YTick',-45:45:45,'TickDir','out', 'TickLength',[0.005/0.3, 0],...
+        'YTickLabel',{'45S','EQ' ,'45N'},'FontName','Helvetica','FontSize',12);
+
+    set(ax, 'xlim' , [0.25 359.75], 'XTick',[0:90:360],'XTickLabel',[]);
+    text(0:90:360, [-90 -90 -90 -90 -90],{'0\circ','90\circE','180\circ','90\circW', '0\circ'},...
+         'FontName','Helvetica','horizontalalignment','center','FontSize',12);
+
+    [x,y] = meshgrid(0+7.5:15:360-7.5, 90-7.5:-15:-90+7.5);
+
+    hold on;
+
+    [c,h] = contourf(lon, lat,  pattern_sst_plot(:, :, 2)-nanmean(pattern_sst_plot(36:61,:,2),[1 2]), 'LevelList', [-100, -1 : 0.001 : 1, 100]);
+   h.LineColor = 'none';
+
+    u_im = imresample([2.5 1.875], squeeze(pattern_u_plot(:,:,2)),[15,15],'linear');
+    v_im  = imresample([2.5 1.875], squeeze(pattern_v_plot(:,:,2)),[15,15],'linear');
+    ncquiverref(x, y, u_im, v_im,'',0.1, 'veccol', 'k');
+
+    load BlueDarkRed18.mat;
+    colormap (BlueDarkRed18);
+
+     plot(coastlon_new, coastlat,'k');
+
+    clim([-0.18 0.18]);
+    box on;
+    grid off;
+    set(ax,'layer','top');
+    text(-180, 80, Label_abc{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
+
+  
+    box off;
+    ax=gca;
+    axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none')
+end
+
+cb1=colorbar(ax,'location','southoutside','position',[0.1 0.5 0.375 0.015]);
+set(cb1,'ticks', -0.2:0.1:0.2, 'ticklength', 0.005/0.3 ,'fontsize',12);
+
+cb1ax = axes('position', cb1.Position, 'visible', 'off');
+text(cb1ax, 0.5, -3.5, 'Change in SSTA (\circ C)','Fontname','Helvetica','fontsize',12,'horizontalalignment','center' );
+
+img =gcf;
+print(img, '-dtiff', '-r600', './LME_long_term_ano_uv850_sst_high_minus_low_global_sst_period_MAM_change');
