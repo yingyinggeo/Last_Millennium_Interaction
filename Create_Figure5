@@ -1,0 +1,553 @@
+%% 11年版 Granger
+
+load('LME_Granger_NINOTNA.mat');
+% load('Granger_NINOTNA_30yr.mat')
+G_Nino2TNA = F21;
+GP_Nino2TNA = sig21;
+G_TNA2Nino = F12;
+GP_TNA2Nino = sig21;
+clear F21; clear F12; clear sig21; clear sig12;
+
+
+load('LME_Granger_NINOIOB.mat');
+% load('Granger_NINOIOD_30yr.mat')
+G_Nino2IOB = F21;
+GP_Nino2IOB = sig21;
+clear F21; clear F12; clear sig21; clear sig12;
+
+
+% page_width = 18; page_height = 18;
+% figure('Units','centimeters',...
+%     'position',[0 0 page_width page_height],...
+%     'PaperPosition',[0 0 page_width page_height],...
+%     'color',[1 1 1]);
+% 
+% xstart = 0.1 ; ystart = 0.2;
+% height = 0.25; width =0.8; epsx = 0.06;  epsy = 0;
+% nrow = 2; ncol = 1;
+% pos = zeros(nrow*ncol,4);
+% for r0 = 1:nrow
+%     for c = 1:ncol
+%         n = (r0-1)*ncol+c;
+%         pos(n,1) = xstart + (c-1)*width + (c-1)*epsx;
+%         pos(n,2) = 1 - (ystart + r0*height + (r0-1)*epsy);
+%         pos(n,3) = width;
+%         pos(n,4) = height;
+%     end
+% end
+% 
+% yr = 850:2005;
+% yr_inum = 1:1126;
+% 
+% color_line = [[0.4 0.4 0.4]; [0 0.4470 0.7410];[0.93 0.594 0.125];[0.85 0.325 0.098]; [103, 116, 176]./255; [88, 148, 80]./255];
+% color_patch = [[0.3 0.3 0.3]; [0 0.4470 0.7410];[0.93 0.594 0.125];[1 0 0]; [103, 116, 176]./255;   [88, 148, 80]./255];
+% 
+% load Vol_type.mat;
+% vol(isnan(type)) = nan;
+% tropical = find(type==0);
+% northern = find(type==1);
+% southern = find(type== -1);
+% Label = {'a Nino3.4  \rightarrow TNA','b Nino3.4  \rightarrow IOB'};
+% 
+% 
+% for inum = 1:nrow*ncol
+% 
+%       load Vol_type.mat;
+%         load Vol_eruption_global.mat;
+% 
+%         vol(isnan(type)) = nan;
+%         tropical = find(type==0);
+%         northern = find(type==1);
+%         southern = find(type== -1);
+% 
+%         ax2 = axes('Position',pos(inum,:));
+%         vol_tropical = zeros(1151,1);   vol_tropical(tropical) = vol(tropical);
+%         vol_northern = zeros(1151,1); vol_northern(northern) = vol(northern);
+%         vol_southern = zeros(1151,1); vol_southern(southern) = vol(southern);
+% 
+%         b1 = bar(ax2, 1:1151, vol_tropical, 5, 'FaceColor',[.4 .4 .4],'EdgeColor','none');
+%         hold on;
+%         b2 =bar(ax2,  1:1151, vol_northern, 5, 'FaceColor',[.4 .4 .4],'EdgeColor','none');
+%         hold on;
+%         b3 =bar(ax2,  1:1151, vol_southern, 5,'FaceColor',[.4 .4 .4],'EdgeColor','none');
+% 
+%         hold on;
+%         scatter(ax2,tropical,vol(tropical)+1, 30,'x','Color',[217 83 25]./255); hold on;
+%         scatter(ax2,northern,vol(northern)+1, 10,'^','MarkerFaceColor',[237 177 36]./255,'MarkerEdgeColor','none'); hold on;
+%         scatter(ax2,southern,vol(southern)+1, 10,'v','MarkerFaceColor',[0 114 189]./255,'MarkerEdgeColor','none'); hold on;
+% 
+%         set(gca,'XLim',[1 1156],'XTick',[]);
+%         set(gca,'YAxisLocation','right');
+%         box off;
+%         set(gca,'Color','none','XColor','none');
+%         hold on;
+%         set(ax2, 'YLim',[0 300],'YTick',50:50:250, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12,'yticklabel',{'','100','','200',''});
+%         ylabel({'Volcanic Mass (Tg)'},'fontname','Helvetica','fontsize',12,'Color',[.4 .4 .4]);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+% 
+%     ax= axes('Position',pos(inum,:),'Color','none');
+%     hold on;
+%     set(ax, 'XLim',[1 1156],'XTick',1:50:1151, 'TickDir','out','TickLength',[0.005/0.5, 0], 'fontname','Helvetica','fontsize',12,'xticklabel',[]);
+%     hold on;
+% 
+%     if inum ==1
+% 
+%         hold on;
+%         % fh = fill([6:1151, fliplr(6:1151)], [(nanmax(R_Nino2TNA(6:1151,:),[],2))', fliplr( nanmin(R_Nino2TNA(6:1151,:),[],2)' ) ], [25 155 149]./255);
+%         fh = fill([6:1150, fliplr(6:1150)], [(nanmean(R_Nino2TNA(6:1150,:),2)+nanstd(R_Nino2TNA(6:1150,:),[],2))', fliplr( (nanmean(R_Nino2TNA(6:1150,:),2)-nanstd(R_Nino2TNA(6:1150,:),[],2))' ) ], [25 155 149]./255);
+%         set(fh,'FaceColor', [25 155 149]./255,'FaceAlpha',0.25,'EdgeColor','none','EdgeAlpha',0.4,'Linestyle','--');
+%         hold on;
+%         plot(ax,6:1150, nanmean(R_Nino2TNA(6:1150,:),2), '-', 'Color',  [25 155 149]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+%         set(ax, 'YLim',[0 0.2],'YTick',0:0.05:0.15, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12, 'yticklabel',{'','0.05','0.10','0.15',''}); %%%%%%%%%%%%%%%remember change%%%%%%%%%
+% 
+%     else
+% 
+%         hold on;
+% 
+%         fh = fill([6:1150, fliplr(6:1150)], [(nanmean(R_Nino2IOB(6:1150,:),2)+nanstd(R_Nino2IOB(6:1150,:),[],2))', fliplr( (nanmean(R_Nino2IOB(6:1150,:),2)-nanstd(R_Nino2IOB(6:1150,:),[],2))' ) ], [84 147 77]./255);
+% 
+%         set(fh,'FaceColor', [84 147 77]./255,'FaceAlpha',0.25,'EdgeColor','none','EdgeAlpha',0.4,'Linestyle','--');
+%         hold on;
+%         plot(ax,6:1150, nanmean(R_Nino2IOB(6:1150,:),2), '-', 'Color', [84 147 77]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+% 
+%         set(ax, 'YLim',[0 0.16],'YTick',0:0.04:0.16, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12, 'yticklabel',{'','0.04','0.08','0.12'}); %%%%%%%%%%%%%%%remember change%%%%%%%%%
+% 
+%     end
+% 
+%     hold on;
+%     % line([1 1156],[0.233 0.233],'color','k','linestyle','--','LineWidth', 0.25);
+%     % line([1 1156],[-0.233 -0.233],'color','k','linestyle','--','LineWidth', 0.25);
+% 
+%     ylabel({'G-causality'},'fontname','Helvetica','fontsize',12);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+%     hold on;
+% 
+%     if inum ==2
+%         text(51:100:1151,repmat(-0.01, 1 ,12),{'900','1000','1100','1200','1300','1400','1500','1600','1700','1800','1900','2000'},'rotation',45,'FontName','Helvetica','horizontalalignment','right','FontSize',10);
+%     end
+% 
+%     ax=gca;
+%     axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+%     text(0.015, 0.925, Label{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',12,'FontWeight','bold');
+% 
+% end
+% 
+% img =gcf;
+% print(img, '-dtiff', '-r600', 'Figure01_sub05_iLME_Granger_NinoTNAIOB_11year.tif');
+
+
+
+
+%%
+%计算30年滑动平均的洋盆相互作用
+clc; clear;
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/sst_idx_850-2005_ILME_FULL_15ens.mat')
+% sst_idx(:,7:8,:) = [];
+sst_idx_ens = sst_idx; sst_idx_ens(:,1:5,:) = sst_idx(:,1:5,:)-273.15; sst_idx_ens(:,7:9,:) = sst_idx(:,7:9,:)-273.15;clear sst_idx; 
+ens = 15;
+
+R_TNA2WTIO = nan(1156,ens); R_WTIO2TNA = nan(1156,ens); R_IOB2Nino = nan(1156,ens); R_TNA2Nino = nan(1156,ens); R_Nino2WTIO = nan(1156,ens); R_Nino2TNA = nan(1156,ens); R_IOD2ATL3 = nan(1156,ens); 
+P_TNA2WTIO = nan(1156,ens); P_WTIO2TNA = nan(1156,ens); P_IOB2Nino = nan(1156,ens); P_TNA2Nino = nan(1156,ens); P_Nino2WTIO = nan(1156,ens); P_Nino2TNA = nan(1156,ens); P_IOD2ATL3 = nan(1156,ens); 
+
+for iens = 1:ens
+    sst_idx = squeeze(sst_idx_ens(:,:,iens));
+
+    yr = 850:2005';
+
+    for iwd = 15:1141
+
+        sst_idx_iwd = sst_idx((iwd-15)*12+1:(iwd+15)*12,:);
+        %实际画图年份： 16:end-15
+
+        sst_idx_iwd_re = reshape(sst_idx_iwd,12,size(sst_idx_iwd,1)./12,11);
+        sst_idx_wd_season_mean = nanmean(sst_idx_iwd_re,2);
+        sst_idx_wd_season_mean_rep = repmat(sst_idx_wd_season_mean ,1,size(sst_idx_iwd,1)./12,1);
+        sst_idx_wd_ano = sst_idx_iwd_re - sst_idx_wd_season_mean_rep;
+
+        %Nino
+        Nino_mon_re = sst_idx_wd_ano(:,:,1);
+        Nino_series = squeeze(nanmean([Nino_mon_re(12,1:end-1);Nino_mon_re(1:2,2:end)],1))';
+        %TNA
+        TNA_mon_re = sst_idx_wd_ano(:,:,2);
+        TNA_series = nanmean(TNA_mon_re(3:5,:),1)';
+        %ATL3_summer
+      
+        %IOB
+        IOB_mon_re = sst_idx_wd_ano(:,:,3);
+        IOB_series = nanmean(IOB_mon_re(3:5,:),1)';
+     
+        Y = detrend(Nino_series);
+        X = detrend(TNA_series(2:end,1));
+
+        [r,p] = corr(Y,X);
+        R_Nino2TNA(iwd,iens) = r; P_Nino2TNA(iwd,iens) = p; clear r; clear p; clear X; clear Y;
+
+      
+        Y = detrend(Nino_series);
+        X = detrend(IOB_series(2:end,1));
+
+        [r,p] = corr(Y,X);
+        R_Nino2IOB(iwd,iens) = r; P_Nino2IOB(iwd,iens) = p; clear r; clear p; clear X; clear Y;
+
+
+    end
+end
+
+%% 自动计算maximum
+clc; clear;
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/sst_idx_850-2005_ILME_FULL_15ens.mat')
+
+% 数据预处理，转换单位
+sst_idx_ens = sst_idx; 
+sst_idx_ens(:,1:5,:) = sst_idx(:,1:5,:)-273.15; 
+sst_idx_ens(:,7:9,:) = sst_idx(:,7:9,:)-273.15; 
+clear sst_idx; 
+
+ens = 15; % 集合成员数
+n_time = 1156; % 时间长度
+
+% 预分配存储最大相关性和对应的月份
+MaxCorr_Nino_TNA = nan(n_time,ens);
+BestMonth_Nino_TNA = nan(n_time,ens);
+MaxCorr_Nino_IOB = nan(n_time,ens);
+BestMonth_Nino_IOB = nan(n_time,ens);
+
+% Niño 指数的时间窗口（10 组）
+nino_windows = {[6:8], [7:9], [8:10], [9:11], [10:12], [11,12,1], [12,1,2], [1:3], [2:4], [3:5]};
+
+% TNA/IOB 指数的时间窗口（12 组）
+tna_iob_windows = {[6:8], [7:9], [8:10], [9:11], [10:12], [11,12,1], [12,1,2], [1:3], [2:4], [3:5], [4:6], [5:7], [6:8]};
+
+for iens = 1:ens
+    sst_idx = squeeze(sst_idx_ens(:,:,iens));
+
+    for iwd = 16:1141  % 31 年滑动窗口
+        sst_idx_iwd = sst_idx((iwd-16)*12+1:(iwd+15)*12,:);
+        sst_idx_iwd_re = reshape(sst_idx_iwd,12,31,11);
+        sst_idx_wd_season_mean = nanmean(sst_idx_iwd_re,2);
+        sst_idx_wd_ano = sst_idx_iwd_re - repmat(sst_idx_wd_season_mean,1,31,1);
+
+        %Nino
+        Nino_mon_re = sst_idx_wd_ano(:,:,1);
+        TNA_mon_re = sst_idx_wd_ano(:,:,2);
+        IOB_mon_re = sst_idx_wd_ano(:,:,3);
+
+        Nino_series = squeeze(nanmean([Nino_mon_re(12,1:end-1);Nino_mon_re(1:2,2:end)],1))';
+        %TNA
+
+        TNA_series = nanmean(TNA_mon_re(3:5,:),1)';
+        %ATL3_summer
+
+        %IOB
+        IOB_mon_re = sst_idx_wd_ano(:,:,3);
+        IOB_series = nanmean(IOB_mon_re(3:5,:),1)';
+
+        for j = 1:10  % Niño 时间窗口
+            for k = 1:13  % TNA/IOB 时间窗口
+                % **修正索引，确保前一年 Niño 与本年 TNA 对应**
+                if j<=5
+                    Nino_series = nanmean(Nino_mon_re(nino_windows{j},1:end-1),1)';
+                end
+
+                if j == 6
+                    Nino_series = squeeze(nanmean([Nino_mon_re(11:12,1:end-1);Nino_mon_re(1,2:end)],1))';
+                end
+
+                if j == 7
+                    Nino_series = squeeze(nanmean([Nino_mon_re(12,1:end-1);Nino_mon_re(1:2,2:end)],1))';
+                end
+
+                if j >=8
+                    Nino_series = nanmean(Nino_mon_re(nino_windows{j},2:end),1)';
+                end
+                %
+                if k<=5
+                    TNA_series = nanmean(TNA_mon_re(tna_iob_windows{j},1:end-1),1)';
+                    IOB_series = nanmean(IOB_mon_re(tna_iob_windows{j},1:end-1),1)';
+                end
+
+                if k == 6
+                    TNA_series = squeeze(nanmean([TNA_mon_re(11:12,1:end-1);TNA_mon_re(1,2:end)],1))';
+                    IOB_series = squeeze(nanmean([IOB_mon_re(11:12,1:end-1);IOB_mon_re(1,2:end)],1))';
+                end
+
+                if k == 7
+                    TNA_series = squeeze(nanmean([TNA_mon_re(12,1:end-1);TNA_mon_re(1:2,2:end)],1))';
+                    IOB_series = squeeze(nanmean([IOB_mon_re(12,1:end-1);IOB_mon_re(1:2,2:end)],1))';
+                end
+
+                if k >=8
+                    TNA_series = nanmean(TNA_mon_re(tna_iob_windows{j},2:end),1)';
+                    IOB_series = nanmean(IOB_mon_re(tna_iob_windows{j},2:end),1)';
+                end
+
+
+                % 去趋势计算相关性
+                [r_tna,~] = corr(detrend(Nino_series), detrend(TNA_series));
+                [r_iob,~] = corr(detrend(Nino_series), detrend(IOB_series));
+                clear Nino_series; clear TNA_series; clear IOB_series;
+
+                r_tna_jk(j,k) = r_tna;
+                r_iob_jk(j,k) = r_iob;
+
+            end
+        end
+
+        [max_val_RTNA, linear_idx_RTNA] = max( r_tna_jk(:));
+        [row_maxRTNA, col_maxRTNA] = ind2sub(size( r_tna_jk), linear_idx_RTNA);
+
+        [max_val_RIOB, linear_idx_RIOB] = max( r_iob_jk(:));
+        [row_maxRIOB, col_maxRIOB] = ind2sub(size( r_iob_jk), linear_idx_RIOB);
+
+        % 存储最大相关性及对应的月份
+        MaxCorr_Nino_TNA(iwd,iens) = max_val_RTNA;
+        BestMonth_Nino_TNA_forNino(iwd,iens) = row_maxRTNA;
+        BestMonth_Nino_TNA_forTNA(iwd,iens) = col_maxRTNA;
+        MaxCorr_Nino_IOB(iwd,iens) = max_val_RIOB;
+        BestMonth_Nino_IOB_forNino(iwd,iens) = row_maxRIOB;
+        BestMonth_Nino_IOB_forIOB(iwd,iens) = col_maxRIOB;
+
+    end
+end
+
+% 保存结果
+save('MaxCorr_Nino_TNA_IOB_fixed.mat', 'MaxCorr_Nino_TNA', 'BestMonth_Nino_TNA_forNino','BestMonth_Nino_TNA_forTNA', 'MaxCorr_Nino_IOB', 'BestMonth_Nino_IOB_forNino','BestMonth_Nino_IOB_forIOB');
+
+%%
+load MaxCorr_Nino_TNA_IOB_fixed.mat;
+R_Nino2IOB = MaxCorr_Nino_IOB;
+R_Nino2TNA = MaxCorr_Nino_TNA;
+
+
+load('LME_Granger_NINOTNA.mat');
+% load('Granger_NINOTNA_30yr.mat')
+G_Nino2TNA = F21;
+GP_Nino2TNA = sig21;
+G_TNA2Nino = F12;
+GP_TNA2Nino = sig21;
+clear F21; clear F12; clear sig21; clear sig12;
+
+
+load('LME_Granger_NINOIOB.mat');
+% load('Granger_NINOIOD_30yr.mat')
+G_Nino2IOB = F21;
+GP_Nino2IOB = sig21;
+clear F21; clear F12; clear sig21; clear sig12;
+
+load /Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/Vol_eruption_global.mat;
+
+page_width = 18; page_height = 18;
+figure('Units','centimeters',...
+    'position',[0 0 page_width page_height],...
+    'PaperPosition',[0 0 page_width page_height],...
+    'color',[1 1 1]);
+
+xstart = 0.125 ; ystart = 0.05;
+height = 0.2; width =0.75; epsx = 0.06;  epsy = 0;
+nrow = 4; ncol = 1;
+pos = zeros(nrow*ncol,4);
+for r0 = 1:nrow
+    for c = 1:ncol
+        n = (r0-1)*ncol+c;
+        pos(n,1) = xstart + (c-1)*width + (c-1)*epsx;
+        pos(n,2) = 1 - (ystart + r0*height + (r0-1)*epsy);
+        pos(n,3) = width;
+        pos(n,4) = height;
+    end
+end
+
+yr = 850:2005;
+yr_inum = 1:1126;
+
+color_line = [[0.4 0.4 0.4]; [0 0.4470 0.7410];[0.93 0.594 0.125];[0.85 0.325 0.098]; [103, 116, 176]./255; [88, 148, 80]./255];
+color_patch = [[0.3 0.3 0.3]; [0 0.4470 0.7410];[0.93 0.594 0.125];[1 0 0]; [103, 116, 176]./255;   [88, 148, 80]./255];
+
+load Vol_type.mat;
+vol(isnan(type)) = nan;
+tropical = find(type==0);
+northern = find(type==1);
+southern = find(type== -1);
+
+ Label = {'a \it {G} \rm (Nino3.4  \rightarrow TNA)','b \it {G} \rm (Nino3.4  \rightarrow IOB)','c \it {R} \rm (Nino3.4  \rightarrow TNA)','d \it {R} \rm (Nino3.4  \rightarrow IOB)'};
+
+for inum = 1:nrow*ncol
+
+    ax2 = axes('Position',pos(inum,:));
+    vol_tropical = zeros(1151,1); vol_tropical(tropical) = vol(tropical);
+    vol_northern = zeros(1151,1); vol_northern(northern) = vol(northern);
+    vol_southern = zeros(1151,1); vol_southern(southern) = vol(southern);
+
+    b1 = bar(ax2, 1:1151, vol_tropical, 5, 'FaceColor',[.4 .4 .4],'EdgeColor','none');
+    hold on;
+    b2 =bar(ax2,  1:1151, vol_northern, 5, 'FaceColor',[.4 .4 .4],'EdgeColor','none');
+    hold on;
+    b3 =bar(ax2,  1:1151, vol_southern, 5,'FaceColor',[.4 .4 .4],'EdgeColor','none');
+
+    hold on;
+    scatter(ax2,tropical,vol(tropical)+1, 30,'x','Color',[217 83 25]./255); hold on;
+    scatter(ax2,northern,vol(northern)+1, 10,'^','MarkerFaceColor',[237 177 36]./255,'MarkerEdgeColor','none'); hold on;
+    scatter(ax2,southern,vol(southern)+1, 10,'v','MarkerFaceColor',[0 114 189]./255,'MarkerEdgeColor','none'); hold on;
+
+    set(gca,'XLim',[1 1156],'XTick',[]);
+    set(gca,'YAxisLocation','right');
+    box off;
+    set(gca,'Color','none','XColor','none');
+    set(gca,'YLim',[0 300],'YTick',50:50:250,'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12,'yticklabel',{'50','','150','','250'});
+    % ylabel({'Volcanic Mass (Tg)'},'fontname','Helvetica','fontsize',12,'Color',[.4 .4 .4]);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+
+    ax= axes('Position',pos(inum,:),'Color','none');
+    hold on;
+    set(ax, 'XLim',[1 1156],'XTick',1:50:1151, 'TickDir','out','TickLength',[0.005/0.5, 0], 'fontname','Helvetica','fontsize',12,'xticklabel',[]);
+    hold on;
+
+    if inum ==1
+        hold on;
+        % fh = fill([6:1151, fliplr(6:1151)], [(nanmax(R_Nino2TNA(6:1151,:),[],2))', fliplr( nanmin(R_Nino2TNA(6:1151,:),[],2)' ) ], [25 155 149]./255);
+        fh = fill([6:1150, fliplr(6:1150)], [(nanmean(G_Nino2TNA(6:1150,:),2)+nanstd(G_Nino2TNA(6:1150,:),[],2))', fliplr( (nanmean(G_Nino2TNA(6:1150,:),2)-nanstd(G_Nino2TNA(6:1150,:),[],2))' ) ], [25 155 149]./255);
+        set(fh,'FaceColor', [25 155 149]./255,'FaceAlpha',0.25,'EdgeColor','none','EdgeAlpha',0.4,'Linestyle','--');
+        hold on;
+        plot(ax,6:1150, nanmean(G_Nino2TNA(6:1150,:),2), '-', 'Color',  [25 155 149]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        set(ax, 'YLim',[0 0.2],'YTick',0:0.05:0.15, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12, 'yticklabel',{'','0.05','0.10','0.15',''}); %%%%%%%%%%%%%%%remember change%%%%%%%%%
+        ylabel({'G-causality'},'fontname','Helvetica','fontsize',12);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+
+
+        y_midwarm = [nanmean(G_Nino2TNA(51:450,:),[1 2]) nanmean(G_Nino2TNA(51:450,:),[1 2])];
+        y_LIA = [nanmean(G_Nino2TNA(451:1001,:),[1 2]) nanmean(G_Nino2TNA(451:1001,:),[1 2])];
+        y_indus = [nanmean(G_Nino2TNA(1002:1140,:),[1 2]) nanmean(G_Nino2TNA(1002:1140,:),[1 2])];
+        x_midwarm = [51 450];
+        x_LIA = [451 1001];
+        x_indus = [1002 1140];
+
+
+        p = polyfit(1002:1140,nanmean(G_Nino2TNA(1002:1140,:),2),1);
+        f = polyval(p,1002:1140);
+        plot(1002:1140,f,'-','LineWidth',1.5,'Color',[110 110 110]./255) ;
+        x11 = (1:139)';
+        y11 = nanmean(G_Nino2TNA(1002:1140,:),2);
+        X = [x11 ones(size(x11))];  % 设计矩阵，包含截距项
+
+        % 使用 regress 计算回归系数及其统计显著性
+        [b,~,~,~,stats] = regress(y11, X);
+        disp(['p-value: ', num2str(stats(3))]);
+
+        % line(x_midwarm,y_midwarm,'Color',[0 0 0],'LineStyle','--','LineWidth',1.5);
+        % hold on;
+        % line(x_LIA,y_LIA,'Color','b','LineStyle','--','LineWidth',1.5);
+
+    end
+
+    if inum==2
+        hold on;
+        fh = fill([6:1150, fliplr(6:1150)], [(nanmean(G_Nino2IOB(6:1150,:),2)+nanstd(G_Nino2IOB(6:1150,:),[],2))', fliplr( (nanmean(G_Nino2IOB(6:1150,:),2)-nanstd(G_Nino2IOB(6:1150,:),[],2))' ) ], [84 147 77]./255);
+
+        set(fh,'FaceColor', [84 147 77]./255,'FaceAlpha',0.25,'EdgeColor','none','EdgeAlpha',0.4,'Linestyle','--');
+        hold on;
+        plot(ax,6:1150, nanmean(G_Nino2IOB(6:1150,:),2), '-', 'Color', [84 147 77]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+
+        set(ax, 'YLim',[0 0.16],'YTick',0:0.04:0.16, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12, 'yticklabel',{'','0.04','0.08','0.12'}); %%%%%%%%%%%%%%%remember change%%%%%%%%%
+        ylabel({'G-causality'},'fontname','Helvetica','fontsize',12);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+
+        y_midwarm = [nanmean(G_Nino2IOB(51:450,:),[1 2]) nanmean(G_Nino2IOB(51:450,:),[1 2])];
+        y_LIA = [nanmean(G_Nino2IOB(451:1001,:),[1 2]) nanmean(G_Nino2IOB(451:1001,:),[1 2])];
+        y_indus = [nanmean(G_Nino2IOB(1002:1140,:),[1 2]) nanmean(G_Nino2IOB(1002:1140,:),[1 2])];
+        x_midwarm = [51 450];
+        x_LIA = [451 1001];
+        x_indus = [1002 1140];
+
+
+        clear p; clear f;
+        p = polyfit(1002:1140,nanmean(G_Nino2IOB(1002:1140,:),2),1);
+        f = polyval(p,1002:1140);
+        plot(1002:1140,f,'-','LineWidth',1.5,'Color',[110 110 110]./255) ;
+        x11 = (1:139)';
+        y11 = nanmean(G_Nino2IOB(1002:1140,:),2);
+        X = [x11 ones(size(x11))];  % 设计矩阵，包含截距项
+
+        % 使用 regress 计算回归系数及其统计显著性
+        [b,~,~,~,stats] = regress(y11, X);
+        disp(['p-value: ', num2str(stats(3))]);
+
+        % line(x_midwarm,y_midwarm,'Color',[0 0 0],'LineStyle','--','LineWidth',1.5);
+        % hold on;
+        % line(x_LIA,y_LIA,'Color','b','LineStyle','--','LineWidth',1.5);
+    end
+
+    if inum ==3
+        hold on;
+        fh = fill([16:1140, fliplr(16:1140)], [(nanmean(R_Nino2TNA(16:1140,:),2)+std(R_Nino2TNA(16:1140,:),[],2))', fliplr( (nanmean(R_Nino2TNA(16:1140,:),2)-std(R_Nino2TNA(16:1140,:),[],2))' ) ],  [25 155 149]./255);
+        set(fh,'FaceColor',  [25 155 149]./255,'FaceAlpha',0.25,'EdgeColor','none','EdgeAlpha',0.4,'Linestyle','--');
+
+        plot(ax,16:1140, nanmean(R_Nino2TNA(16:1140,:),2), '-', 'Color',  [25 155 149]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        set(ax, 'YLim',[0.6 1],'YTick',0.7:0.1:0.9, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12); %%%%%%%%%%%%%%%remember change%%%%%%%%%
+        ylabel({'\it R'},'fontname','Helvetica','fontsize',12);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+  
+        y_midwarm = [nanmean(R_Nino2TNA(51:450,:),[1 2]) nanmean(R_Nino2TNA(51:450,:),[1 2])];
+        y_LIA = [nanmean(R_Nino2TNA(451:1001,:),[1 2]) nanmean(R_Nino2TNA(451:1001,:),[1 2])];
+        y_indus = [nanmean(R_Nino2TNA(1002:1140,:),[1 2]) nanmean(R_Nino2TNA(1002:1140,:),[1 2])];
+        x_midwarm = [51 450];
+        x_LIA = [451 1001];
+        x_indus = [1002 1140];
+
+
+        p = polyfit(1002:1140,nanmean(R_Nino2TNA(1002:1140,:),2),1); 
+        f = polyval(p,1002:1140); 
+        plot(1002:1140,f,'-','LineWidth',1.5,'Color',[110 110 110]./255) ;
+        x11 = (1:139)';
+        y11 = nanmean(R_Nino2TNA(1002:1140,:),2);
+        X = [x11 ones(size(x11))];  % 设计矩阵，包含截距项
+
+        % 使用 regress 计算回归系数及其统计显著性
+        [b,~,~,~,stats] = regress(y11, X);
+        disp(['p-value: ', num2str(stats(3))]);
+
+        % line(x_midwarm,y_midwarm,'Color',[0 0 0],'LineStyle','--','LineWidth',1.5);
+        % hold on;
+        % line(x_LIA,y_LIA,'Color','b','LineStyle','--','LineWidth',1.5);
+
+    end
+
+    if inum==4
+        hold on;
+        fh = fill([16:1140, fliplr(16:1140)], [(nanmean(R_Nino2IOB(16:1140,:),2)+std(R_Nino2IOB(16:1140,:),[],2))', fliplr( (nanmean(R_Nino2IOB(16:1140,:),2)-std(R_Nino2IOB(16:1140,:),[],2))' ) ], [84 147 77]./255);
+        set(fh,'FaceColor', [84 147 77]./255,'FaceAlpha',0.25,'EdgeColor','none','EdgeAlpha',0.4,'Linestyle','--');
+
+        plot(ax,16:1140, nanmean(R_Nino2IOB(16:1140,:),2), '-', 'Color', [84 147 77]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        set(ax, 'YLim',[0.5 1],'YTick',0.6:0.1:0.9, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12); %%%%%%%%%%%%%%%remember change%%%%%%%%%
+        ylabel({'\it R'},'fontname','Helvetica','fontsize',12);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+        y_midwarm = [nanmean(R_Nino2IOB(51:450,:),[1 2]) nanmean(R_Nino2IOB(51:450,:),[1 2])];
+        y_LIA = [nanmean(R_Nino2IOB(451:1001,:),[1 2]) nanmean(R_Nino2IOB(451:1001,:),[1 2])];
+        y_indus = [nanmean(R_Nino2IOB(1002:1140,:),[1 2]) nanmean(R_Nino2IOB(1002:1140,:),[1 2])];
+        x_midwarm = [51 450];
+        x_LIA = [451 1001];
+        x_indus = [1002 1140];
+
+
+        clear p; clear f;
+        p = polyfit(1002:1140,nanmean(R_Nino2IOB(1002:1140,:),2),1);
+        f = polyval(p,1002:1140);
+        plot(1002:1140,f,'-','LineWidth',1.5,'Color',[110 110 110]./255) ;
+        % 构造回归矩阵 (加上常数项)
+        x11 = (1:139)';
+        y11 = nanmean(R_Nino2IOB(1002:1140,:),2);
+        X = [x11 ones(size(x11))];  % 设计矩阵，包含截距项
+
+        % 使用 regress 计算回归系数及其统计显著性
+        [b,~,~,~,stats] = regress(y11, X);
+        disp(['p-value: ', num2str(stats(3))]);
+
+        % line(x_midwarm,y_midwarm,'Color',[0 0 0],'LineStyle','--','LineWidth',1.5);
+        % hold on;
+        % line(x_LIA,y_LIA,'Color','b','LineStyle','--','LineWidth',1.5);
+    end
+ 
+    hold on;
+    if inum ==4
+        text(51:100:1151,repmat(0.45, 1 ,12),{'900','1000','1100','1200','1300','1400','1500','1600','1700','1800','1900','2000'},'rotation',45,'FontName','Helvetica','horizontalalignment','right','FontSize',10);
+    end
+
+    ax=gca;
+    axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+    text(0.015, 0.925, Label{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',12,'FontWeight','bold');
+
+end
+
+img =gcf;
+print(img, '-dtiff', '-r600', 'Figure01_sub05_iLME_NinoTNAIOB_31yr_best_lagmonths_v1.tif');
