@@ -1,1 +1,272 @@
+ %% 主图
+% External forcing - 太阳辐射
+ssi = ncread('SOLAR_SPECTRAL_VK_Lean_849-2008_annual_c130909.nc','ssi');
+wvl = ncread('SOLAR_SPECTRAL_VK_Lean_849-2008_annual_c130909.nc','wvl');
+time = ncread('SOLAR_SPECTRAL_VK_Lean_849-2008_annual_c130909.nc','time');
+date = ncread('SOLAR_SPECTRAL_VK_Lean_849-2008_annual_c130909.nc','date');
 
+wvl_rep = repmat(wvl, 1,1160);
+
+for iyear = 1:1160    
+        ssi_iyear = squeeze(ssi(:,iyear));
+        ttl(iyear,1) = sum(ssi_iyear.*wvl);
+end
+
+TSI = ttl(2:1157,1);
+save TSI_850_2005.mat TSI;
+
+%%温室气体
+co2 = ncread('ghg_pmip3_850-2007_annual_c100517.v1.nc','CO2');
+ch4 = ncread('ghg_pmip3_850-2007_annual_c100517.v1.nc','CH4');
+n2o = ncread('ghg_pmip3_850-2007_annual_c100517.v1.nc','N2O');
+date = ncread('ghg_pmip3_850-2007_annual_c100517.v1.nc','date');
+
+CO2 = co2(1:1156,1); CH4 = ch4(1:1156,1); N2O = n2o(1:1156,1);
+% load data
+load TSI_850_2005.mat TSI;
+co2 = ncread('ghg_pmip3_850-2007_annual_c100517.v1.nc','CO2');
+ch4 = ncread('ghg_pmip3_850-2007_annual_c100517.v1.nc','CH4');
+n2o = ncread('ghg_pmip3_850-2007_annual_c100517.v1.nc','N2O');
+date = ncread('ghg_pmip3_850-2007_annual_c100517.v1.nc','date');
+CO2 = co2(1:1156,1); CH4 = ch4(1:1156,1); N2O = n2o(1:1156,1);
+
+load('Granger_NINOTNA_30yr.mat');
+% load('Granger_NINOTNA_30yr.mat')
+R_Nino2TNA = F21;
+P_Nino2TNA = sig21;
+R_TNA2Nino = F12;
+P_TNA2Nino = sig21;
+clear F21; clear F12; clear sig21; clear sig12;
+
+
+load('Granger_NINOIOB_30yr.mat');
+% load('Granger_NINOIOD_30yr.mat')
+R_Nino2IOB = F21;
+P_Nino2IOB = sig21;
+clear F21; clear F12; clear sig21; clear sig12;
+
+%
+page_width = 18; page_height = 18;
+figure('Units','centimeters',...
+    'position',[0 0 page_width page_height],...
+    'PaperPosition',[0 0 page_width page_height],...
+    'color',[1 1 1]);
+
+xstart = 0.125 ; ystart = 0.05;
+height = 0.2; width =0.75; epsx = 0.13;  epsy = 0;
+nrow = 4; ncol = 1;
+pos = zeros(nrow*ncol,4);
+for r0 = 1:nrow
+    for c = 1:ncol
+        n = (r0-1)*ncol+c;
+        pos(n,1) = xstart + (c-1)*width + (c-1)*epsx;
+        pos(n,2) = 1 - (ystart + r0*height + (r0-1)*epsy);
+        pos(n,3) = width;
+        pos(n,4) = height;
+    end
+end
+
+yr_inum = 1:1126;
+color_line =  [[0 73 195]./255;  [0 116 195]./255; [100 30 181]./255;  [103, 116, 176]./255;   [0.4 0.4 0.4]];
+color_patch = [[0 73 195]./255;  [0 116 195]./255; [100 30 181]./255;  [103, 116, 176]./255;   [0.3 0.3 0.3]];
+Label = {'a','b','c','d','e'};
+
+for inum = 1:4
+    if inum == 1
+        %
+        load Vol_type.mat;
+        load Vol_eruption_global.mat;
+
+        vol(isnan(type)) = nan;
+        tropical = find(type==0);
+        northern = find(type==1);
+        southern = find(type== -1);
+
+        ax2 = axes('Position',pos(inum,:));
+        vol_tropical = zeros(1151,1);   vol_tropical(tropical) = vol(tropical);
+        vol_northern = zeros(1151,1); vol_northern(northern) = vol(northern);
+        vol_southern = zeros(1151,1); vol_southern(southern) = vol(southern);
+
+        b1 = bar(ax2, 1:1151, vol_tropical, 5, 'FaceColor',[.4 .4 .4],'EdgeColor','none');
+        hold on;
+        b2 =bar(ax2,  1:1151, vol_northern, 5, 'FaceColor',[.4 .4 .4],'EdgeColor','none');
+        hold on;
+        b3 =bar(ax2,  1:1151, vol_southern, 5,'FaceColor',[.4 .4 .4],'EdgeColor','none');
+
+        hold on;
+        scatter(ax2,tropical,vol(tropical)+1, 30,'x','Color',[217 83 25]./255); hold on;
+        scatter(ax2,northern,vol(northern)+1, 10,'^','MarkerFaceColor',[237 177 36]./255,'MarkerEdgeColor','none'); hold on;
+        scatter(ax2,southern,vol(southern)+1, 10,'v','MarkerFaceColor',[0 114 189]./255,'MarkerEdgeColor','none'); hold on;
+
+        set(gca,'XLim',[1 1156],'XTick',[]);
+        set(gca,'YAxisLocation','right');
+        box off;
+        set(gca,'Color','none','XColor','none');
+        hold on;
+        set(ax2, 'YLim',[0 300],'YTick',50:50:250, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12,'yticklabel',{'','100','','200',''});
+        ylabel({'Volcanic Mass (Tg)'},'fontname','Helvetica','fontsize',12,'Color',[.4 .4 .4]);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+
+        ax= axes('Position',pos(inum,:),'Color','none');
+        hold on;
+        fh = fill([16:1140, fliplr(16:1140)], [(nanmean(R_Nino2TNA(16:1140,:),2)+nanstd(R_Nino2TNA(16:1140,:),[],2))', fliplr( (nanmean(R_Nino2TNA(16:1140,:),2)-nanstd(R_Nino2TNA(16:1140,:),[],2))' ) ], [25 155 149]./255);
+        set(fh,'FaceColor', [25 155 149]./255,'FaceAlpha',0.25,'EdgeColor','none','EdgeAlpha',0.4,'Linestyle','--');
+        hold on;
+        plot(ax,16:1140, nanmean(R_Nino2TNA(16:1140,:),2), '-', 'Color',  [25 155 149]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+
+        % yyyyyyy = nanmean(R_Nino2TNA(16:1140,:),2);
+        % hold on;
+        % axxxx = 16:1140;
+        % iiiiiiidx = find(nanmean(P_Nino2TNA(16:1140,:),2)>2/3);
+        % scatter(ax, axxxx(iiiiiiidx), yyyyyyy(iiiiiiidx),1,'MarkerEdgeColor','r','MarkerEdgeColor','r');
+
+        y_midwarm = [nanmean(R_Nino2TNA(51:450,:),[1 2]) nanmean(R_Nino2TNA(51:450,:),[1 2])];
+        y_LIA = [nanmean(R_Nino2TNA(451:1001,:),[1 2]) nanmean(R_Nino2TNA(451:1001,:),[1 2])];
+        y_indus = [nanmean(R_Nino2TNA(1002:1140,:),[1 2]) nanmean(R_Nino2TNA(1002:1140,:),[1 2])];
+        x_midwarm = [51 450];
+        x_LIA = [451 1001];
+        x_indus = [1002 1140];
+
+
+        p = polyfit(1002:1140,nanmean(R_Nino2TNA(1002:1140,:),2),1); 
+        f = polyval(p,1002:1140); 
+        plot(1002:1140,f,'-','LineWidth',1.5,'Color',[110 110 110]./255) ;
+        x11 = (1:139)';
+        y11 = nanmean(R_Nino2TNA(1002:1140,:),2);
+        X = [x11 ones(size(x11))];  % 设计矩阵，包含截距项
+
+        % 使用 regress 计算回归系数及其统计显著性
+        [b,~,~,~,stats] = regress(y11, X);
+        disp(['p-value: ', num2str(stats(3))]);
+
+        % line(x_midwarm,y_midwarm,'Color',[0 0 0],'LineStyle','--','LineWidth',1.5);
+        % hold on;
+        % line(x_LIA,y_LIA,'Color','b','LineStyle','--','LineWidth',1.5);
+        % % hold on;
+        % % line(x_indus, y_indus,'Color',[255 110 93]./255,'LineStyle','--','LineWidth',1.5 )
+
+
+        set(ax, 'YLim',[0 0.15],'YTick',0:0.05:0.15, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12, 'yticklabel',{'','0.05','0.10','',''}); %%%%%%%%%%%%%%%remember change%%%%%%%%%
+        set(ax, 'XLim',[1 1156],'XTick',51:50:1156-50, 'TickDir','out','TickLength',[0.006/0.5, 0], 'fontname','Helvetica','fontsize',10,'xticklabel',{'','','','','','','','','','','','','','','','','','','','','',''},'FontName','Helvetica','FontSize',12);
+    end
+
+    if inum == 2
+        load Vol_type.mat;
+        load Vol_eruption_global.mat;
+
+        vol(isnan(type)) = nan;
+        tropical = find(type==0);
+        northern = find(type==1);
+        southern = find(type== -1);
+
+        ax2 = axes('Position',pos(inum,:));
+        vol_tropical = zeros(1151,1); vol_tropical(tropical) = vol(tropical);
+        vol_northern = zeros(1151,1); vol_northern(northern) = vol(northern);
+        vol_southern = zeros(1151,1); vol_southern(southern) = vol(southern);
+
+        b1 = bar(ax2, 1:1151, vol_tropical, 5, 'FaceColor',[.4 .4 .4],'EdgeColor','none');
+        hold on;
+        b2 =bar(ax2,  1:1151, vol_northern, 5, 'FaceColor',[.4 .4 .4],'EdgeColor','none');
+        hold on;
+        b3 =bar(ax2,  1:1151, vol_southern, 5,'FaceColor',[.4 .4 .4],'EdgeColor','none');
+
+        hold on;
+        scatter(ax2,tropical,vol(tropical)+1, 30,'x','Color',[217 83 25]./255); hold on;
+        scatter(ax2,northern,vol(northern)+1, 10,'^','MarkerFaceColor',[237 177 36]./255,'MarkerEdgeColor','none'); hold on;
+        scatter(ax2,southern,vol(southern)+1, 10,'v','MarkerFaceColor',[0 114 189]./255,'MarkerEdgeColor','none'); hold on;
+
+        set(gca,'XLim',[1 1156],'XTick',[]);
+        set(gca,'YAxisLocation','right');
+        box off;
+        set(gca,'Color','none','XColor','none');
+        hold on;
+        set(ax2, 'YLim',[0 300],'YTick',50:50:250, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12,'yticklabel',{'','100','','200',''});
+        ylabel({'Volcanic Mass (Tg)'},'fontname','Helvetica','fontsize',12,'Color',[.4 .4 .4]);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+
+        ax= axes('Position',pos(inum,:),'Color','none');
+
+        hold on;
+        fh = fill([16:1140, fliplr(16:1140)], [(nanmean(R_Nino2IOB(16:1140,:),2)+nanstd(R_Nino2IOB(16:1140,:),[],2))', fliplr( (nanmean(R_Nino2IOB(16:1140,:),2)-nanstd(R_Nino2IOB(16:1140,:),[],2))' ) ], [84 147 77]./255);
+
+        set(fh,'FaceColor', [84 147 77]./255,'FaceAlpha',0.25,'EdgeColor','none','EdgeAlpha',0.4,'Linestyle','--');
+        hold on;
+        plot(ax,16:1140, nanmean(R_Nino2IOB(16:1140,:),2), '-', 'Color', [84 147 77]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+
+        % yyyyyyyy = nanmean(R_Nino2IOB(16:1140,:),2);
+        % hold on;
+        % axxxx = 16:1140;
+        % iiiiiiiidx = find(nanmean(P_Nino2IOB(16:1140,:),2)>2/3);
+        % scatter(ax, axxxx(iiiiiiiidx ), yyyyyyyy(iiiiiiiidx ),1,'MarkerEdgeColor','r','MarkerEdgeColor','r');
+        % % 
+
+        y_midwarm = [nanmean(R_Nino2IOB(51:450,:),[1 2]) nanmean(R_Nino2IOB(51:450,:),[1 2])];
+        y_LIA = [nanmean(R_Nino2IOB(451:1001,:),[1 2]) nanmean(R_Nino2IOB(451:1001,:),[1 2])];
+        y_indus = [nanmean(R_Nino2IOB(1002:1140,:),[1 2]) nanmean(R_Nino2IOB(1002:1140,:),[1 2])];
+        x_midwarm = [51 450];
+        x_LIA = [451 1001];
+        x_indus = [1002 1140];
+
+
+        clear p; clear f;
+        p = polyfit(1002:1140,nanmean(R_Nino2IOB(1002:1140,:),2),1); 
+        f = polyval(p,1002:1140); 
+        plot(1002:1140,f,'-','LineWidth',1.5,'Color',[110 110 110]./255) ;
+        x11 = (1:139)';
+        y11 = nanmean(R_Nino2IOB(1002:1140,:),2);
+        X = [x11 ones(size(x11))];  % 设计矩阵，包含截距项
+
+        % 使用 regress 计算回归系数及其统计显著性
+        [b,~,~,~,stats] = regress(y11, X);
+        disp(['p-value: ', num2str(stats(3))]);
+
+        % line(x_midwarm,y_midwarm,'Color',[0 0 0],'LineStyle','--','LineWidth',1.5);
+        % hold on;
+        % line(x_LIA,y_LIA,'Color','b','LineStyle','--','LineWidth',1.5);
+        % % hold on;
+        % line(x_indus, y_indus,'Color',[255 110 93]./255,'LineStyle','--','LineWidth',1.5 )
+
+        set(ax, 'YLim',[0 0.12],'YTick',0:0.04:0.12, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12, 'yticklabel',{'','0.04','0.08',''}); %%%%%%%%%%%%%%%remember change%%%%%%%%%
+        set(ax, 'XLim',[1 1156],'XTick',51:50:1156-50, 'TickDir','out','TickLength',[0.006/0.5, 0], 'fontname','Helvetica','fontsize',10,'xticklabel',{'','','','','','','','','','','','','','','','','','','','','',''},'FontName','Helvetica','FontSize',12);
+    end
+    %
+    %
+    if inum == 3
+        ax = axes('Position',pos(inum,:),'Color','none');
+        plot(ax,1:1156, zscore(TSI), '-', 'Color', [74 32 1]./255, 'LineWidth', 1, 'LineJoin' ,'miter');
+        set(ax, 'XLim',[1 1156],'XTick',51:50:1156-50, 'TickDir','out','TickLength',[0.006/0.5, 0], 'fontname','Helvetica','fontsize',10,'xticklabel',{'','','','','','','','','','','','','','','','','','','','','',''},'FontName','Helvetica','FontSize',12);
+        set(ax, 'YLim',[-1.46 4],'YTick',-1.46:1.3650:4, 'TickDir','out','TickLength',[0.006/0.5, 0],'yticklabel',{'','1360.5','1361.0','1361.5',''},'FontName','Helvetica','FontSize',12);
+
+    end
+
+    %
+    if inum ==4
+        ax2 = axes('Position',pos(inum,:),'Color','none');
+        set(gca,'XLim',[1 1156],'XTick',[]);
+        set(gca,'YAxisLocation','right');
+        box off;
+        set(gca,'Color','none','XColor','none');
+        hold on;
+        plot(ax2,1:1156, CH4, '-', 'Color', 'k', 'LineWidth', 1.5, 'LineJoin' ,'miter');
+
+        set(ax2, 'YLim',[0 2000],'YTick',0:500:1500, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12,'yticklabel',{'0','500','1000','1500',''});
+        ylabel({'CH4 (ppb)'},'fontname','Helvetica','fontsize',12,'Color',[0 0 0]);   %%%%%%%%%%%%%%%remember change%%%%%%%%%
+
+        ax= axes('Position',pos(inum,:),'Color','none');
+
+        hold on;
+        plot(ax,1:1156, CO2, '-', 'Color', [153 0 2]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+        hold on;
+        plot(ax,1:1156, N2O, '-', 'Color', [210 126 29]./255, 'LineWidth', 1.5, 'LineJoin' ,'miter');
+
+        set(ax, 'YLim',[250 400],'YTick',250:25:400, 'TickDir','out','TickLength',[0.004/0.5, 0], 'fontname','Helvetica','fontsize',12,'yticklabel',{'250','','300','','350','',''});
+        set(ax, 'XLim',[1 1156],'XTick',51:50:1156, 'TickDir','out','TickLength',[0.006/0.5, 0], 'fontname','Helvetica','fontsize',10,'xticklabel',{'900','','1000','','1100','','1200','','1300','','1400','','1500','','1600','','1700','','1800','','1900','','2000'},'FontName','Helvetica','FontSize',12);
+
+    end
+
+    hold on;
+    ax=gca;
+    axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+    text(0.01, 0.9, Label{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
+end
+
+img =gcf;
+print(img, '-dtiff', '-r600', 'Figure2_20241029_30yr_v1.tif');
