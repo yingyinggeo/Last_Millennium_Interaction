@@ -819,6 +819,17 @@ r_Nino_MAM_vol_yes(p_Nino_MAM_vol_yes>0.1) = nan;
 r_Nino_MAM_vol_no(p_Nino_MAM_vol_no>0.1) = nan;
 pattern(:,:,3) = r_Nino_MAM_vol_yes - r_Nino_MAM_vol_no;
 
+
+hadisst = ncread('/Users/yingyingfeng/Downloads/Data/HadISST_sst.nc','sst');
+hadisst_per = permute(hadisst,[2,1,3]);  % 1961-1-1  1093   %2005-12-15  1632
+mask_sst_tmp = squeeze(hadisst_per(:,:,end)); clear hadisst_per;
+mask_sst_tmp(~isnan(mask_sst_tmp))=1;
+reso_lat = 1.875; reso_lon = 2.5;
+mask_sst = imresample([1 1], mask_sst_tmp,[reso_lon,reso_lat],'linear');
+mask_sst_rep = repmat(mask_sst,[1 1 3]);
+pattern(isnan(mask_sst_rep)) = nan;
+
+
 pattern_plot = nan(96,144,3);
 pattern_plot(:,1:72,:) = pattern(:,73:144,:);
 pattern_plot(:,73:144,:) = pattern(:,1:72,:);
