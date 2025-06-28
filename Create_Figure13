@@ -799,15 +799,33 @@ for ilat = 1:size(sst_pattern_MAM_volyr_re,1)
     end
 end
 save regress_nino3.4_SONSST_yr3_vol_yes.mat r_Nino_SON3_vol_yes  p_Nino_SON3_vol_yes;
+
 %% plot
-pattern = r_Nino_DJF_vol_yes - r_Nino_DJF_vol_no;
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/vol_result_new/regress_nino3.4_MAMSST_yr_vol_no_pre_10yr_ano.mat');
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/vol_result_new/regress_nino3.4_MAMSST_yr_vol_yes_pre_10yr_ano.mat');
+r_Nino_MAM_vol_yes(p_Nino_MAM_vol_yes>0.1) = nan;
+r_Nino_MAM_vol_no(p_Nino_MAM_vol_no>0.1) = nan;
+pattern = r_Nino_MAM_vol_yes - r_Nino_MAM_vol_no;
+
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/vol_result_new/northern_regress_nino3.4_MAMSST_yr_vol_no_pre_10yr_ano.mat')
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/vol_result_new/northern_regress_nino3.4_MAMSST_yr_vol_yes_pre_10yr_ano.mat')
+r_Nino_MAM_vol_yes(p_Nino_MAM_vol_yes>0.1) = nan;
+r_Nino_MAM_vol_no(p_Nino_MAM_vol_no>0.1) = nan;
 pattern(:,:,2) = r_Nino_MAM_vol_yes - r_Nino_MAM_vol_no;
-pattern(:,:,3) = r_Nino_JJA_vol_yes - r_Nino_JJA_vol_no;
-pattern(:,:,4) =  r_Nino_SON_vol_yes - r_Nino_SON_vol_no;
+
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/vol_result_new/southern_regress_nino3.4_MAMSST_yr_vol_no_pre_10yr_ano.mat')
+load('/Users/yingyingfeng/Downloads/Data/Paleo3bs_Project/vol_result_new/southern_regress_nino3.4_MAMSST_yr_vol_yes_pre_10yr_ano.mat')
+r_Nino_MAM_vol_yes(p_Nino_MAM_vol_yes>0.1) = nan;
+r_Nino_MAM_vol_no(p_Nino_MAM_vol_no>0.1) = nan;
+pattern(:,:,3) = r_Nino_MAM_vol_yes - r_Nino_MAM_vol_no;
+
+pattern_plot = nan(96,144,3);
+pattern_plot(:,1:72,:) = pattern(:,73:144,:);
+pattern_plot(:,73:144,:) = pattern(:,1:72,:);
 
 
-lon_af = -180+2.5/2 : 2.5: 180-2.5/2;
-lat_af = 90-1.875/2 : -1.875 : -90+1.875/2;
+lon_af = 0+2.5/2 : 2.5 : 360-2.5/2; lon_af = lon_af';
+lat_af = 90-1.875/2 : -1.875 : -90+1.875/2; lat_af = lat_af';
 
 page_width = 18;
 page_height = 18;
@@ -817,13 +835,13 @@ figure('Units','centimeters',...
     'color',[1 1 1]);
 
 % set position of three subplots
-nrow=4;
+nrow=3;
 ncol=1;
-width = 0.275;
-height = width./2.769;
-epsw = 0.075;
-epsh = 0.085;
-xstart=0.075;
+width = 0.375;
+height = width./3;
+epsw = 0.1;
+epsh = 0.09;
+xstart=0.1;
 ystart=0.05;
 pos = zeros(nrow*ncol,4);
 for r=1:nrow
@@ -837,9 +855,9 @@ end
 fsize=12;
 
 % labels
-Label = {'Tropical Eruption'};
-Label_abc = {'h','i','j','k'};
-Label_season = {'DJF', 'MAM','JJA','SON'};
+Label = {'Tropical Eruption','Northern Eruption','Southern Eruption'};
+Label_abc = {'a', 'b', 'c'};
+
 
 load coastlines;
 
@@ -847,24 +865,24 @@ iiid = find(coastlon<0);
 coastlon_new = coastlon;
 coastlon_new(iiid) = coastlon(iiid)+360;
 
-coastlon_new(coastlon_new>359.5) = nan;
-coastlon_new(coastlon_new<-359.5) = nan;
-coastlat(coastlat>89.5) = nan;
-coastlat(coastlat<-89.5) = nan;
-coastlat(coastlat>-0.025&coastlat<0.025) = nan;
+coastlon_new(coastlon_new>359) = nan;
+coastlon_new(coastlon_new<-359) = nan;
+coastlat(coastlat>89) = nan;
+coastlat(coastlat<-89) = nan;
+coastlat(coastlat>-0.05&coastlat<0.05) = nan;
 
 for inum = 1:nrow * ncol
 
     ax= axes('Position',pos(inum,:),'Color','none');
-    set(ax, 'ylim' , [-65, 65],'YTick',-45:45:45,'TickDir','out', 'TickLength',[0.005/0.3, 0],...
-        'YTickLabel',{'45S','EQ' ,'45N'},'FontName','Helvetica','FontSize',12);
+    set(ax, 'ylim' , [-60, 60],'YTick', -60:60:60,'TickDir','out', 'TickLength',[0.005/0.3, 0],...
+        'YTickLabel',{'60S','EQ' ,'60N'},'FontName','Helvetica','FontSize',11);
 
-    set(ax, 'xlim' , [-180 180], 'XTick',-180:90:180,'XTickLabel',{'180W','90W','0','90E', '180E'},'FontName','Helvetica','FontSize',12,'XTickLabelRotation',0);
-    % text(0:90:360, [-45 -45 -45 -45 -45],{'0\circ','90\circE','180\circ','90\circW', '0\circ'},...
-    %      'FontName','Helvetica','horizontalalignment','center','FontSize',9)
+    set(ax, 'xlim' , [0.25 359.75], 'XTick', 0:90:360,'XTickLabel',[]);
+    text(0:90:360, [-90 -90 -90 -90 -90],{'0','90E','180','90W', '0'},...
+        'FontName','Helvetica','horizontalalignment','center','FontSize',11)
 
      hold on %!!!!!!!!
-     imagesc( lon_af, lat_af, pattern(:, :, inum),'alphadata',~isnan( pattern(:, :, inum) ) );
+     imagesc( lon_af, lat_af, pattern_plot(:, :, inum),'alphadata',~isnan( pattern_plot(:, :, inum) ) );
     %
     % 等值线
     hold on;
@@ -875,33 +893,28 @@ for inum = 1:nrow * ncol
     hold on;
 
     clim([-0.45 0.45]);
+    plot(coastlon_new, coastlat,'k');
 
-    % % plot(coastlon, coastlat,'k');
-    geoshow('/Users/yingyingfeng/Downloads/D/FengYingying/FengYingyingData/MapData/GLOBALSHP/ContinentsPoly.shp','linewidth',0.5,'Facecolor',[0.9 0.9 0.9]);
+ 
+    hold on;
+    text(0, 80, Label_abc{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
+    text(30, 77.5, Label{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',12);
 
-
-    box on;
+    %
+      box off;
     grid off;
     set(ax,'layer','top');
 
-    % if inum==1 
-    % text(0, 110, 'Southern Eruption',  'FontName','Helvetica','horizontalalignment','center','FontSize',14);
-    % end
-    hold on;
-    text(-180, 85, Label_abc{inum},  'FontName','Helvetica','horizontalalignment','left','FontSize',14,'FontWeight','bold');
-    text(180, 85, Label_season{inum},  'FontName','Helvetica','horizontalalignment','right','FontSize',12);
-
-    %
-    % ax=gca;
-    % axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
+    ax=gca;
+    axes('position',ax.Position,'box','on','ytick',[],'xtick',[],'color','none');
 
 end
 
-cb1=colorbar(ax,'location','southoutside','position',[0.075 0.15 0.5 0.015]);
+cb1=colorbar(ax,'location','southoutside','position',[0.1 0.3 0.375 0.015]);
 set(cb1,'ticks', -0.4:0.2:0.4, 'ticklength', 0.005/0.3 ,'fontsize',12);
 
 cb1ax = axes('position', cb1.Position, 'visible', 'off');
 text(cb1ax, 0.5, -4, 'Change in response of SSTA to Nino3.4','Fontname','Helvetica','fontsize',14,'horizontalalignment','center' );
 % % 
-% img =gcf;
-% print(img, '-dtiff', '-r600', 'Northern_response_of_SSTA_to_Nino3.4_10yr_pre_cal_ano_colorbar.tif');
+img =gcf;
+print(img, '-dtiff', '-r600', 'Response_of_SSTA_to_Nino3.4_MAM.tif');
